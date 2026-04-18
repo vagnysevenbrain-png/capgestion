@@ -17,15 +17,17 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
-
+app.set('trust proxy', 1);
 app.use(session({
   secret:            process.env.SESSION_SECRET || 'dev_secret_changez_moi',
   resave:            false,
   saveUninitialized: false,
+  proxy:             true,
   cookie: {
     httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
-    maxAge:   8 * 60 * 60 * 1000   // 8 heures
+    secure:   true,
+    sameSite: 'none',
+    maxAge:   8 * 60 * 60 * 1000
   }
 }));
 

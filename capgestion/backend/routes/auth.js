@@ -1,12 +1,8 @@
-cat /home/claude/capgestion/backend/routes/auth.js
-Sortie
-
 const express  = require('express');
 const crypto   = require('crypto');
 const db       = require('../db');
 const router   = express.Router();
 
-// Vérifie un mot de passe contre un hash pbkdf2:sha256:iterations:salt:hash
 async function verifierMotDePasse(motDePasse, hashStocke) {
   try {
     if (hashStocke.startsWith('pbkdf2:')) {
@@ -26,7 +22,6 @@ async function verifierMotDePasse(motDePasse, hashStocke) {
   } catch { return false; }
 }
 
-// POST /api/auth/login
 router.post('/login', async (req, res) => {
   const { email, mot_de_passe } = req.body;
   if (!email || !mot_de_passe) {
@@ -40,7 +35,7 @@ router.post('/login', async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(401).json({ erreur: 'Email ou mot de passe incorrect.' });
     }
-    const user = result.rows[0];
+    const user   = result.rows[0];
     const valide = await verifierMotDePasse(mot_de_passe, user.mot_de_passe);
     if (!valide) {
       return res.status(401).json({ erreur: 'Email ou mot de passe incorrect.' });
@@ -59,14 +54,12 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/logout
 router.post('/logout', (req, res) => {
   req.session.destroy(() => {
     res.json({ ok: true });
   });
 });
 
-// GET /api/auth/moi — infos utilisateur connecté
 router.get('/moi', (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).json({ connecte: false });

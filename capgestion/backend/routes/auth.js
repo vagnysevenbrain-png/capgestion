@@ -1,7 +1,30 @@
-const express = require('express');
-const bcrypt  = require('bcrypt');
-const db      = require('../db');
-const router  = express.Router();
+cat /home/claude/capgestion/backend/routes/auth.js
+Sortie
+
+const express  = require('express');
+const crypto   = require('crypto');
+const db       = require('../db');
+const router   = express.Router();
+
+// Vérifie un mot de passe contre un hash pbkdf2:sha256:iterations:salt:hash
+async function verifierMotDePasse(motDePasse, hashStocke) {
+  try {
+    if (hashStocke.startsWith('pbkdf2:')) {
+      const parties     = hashStocke.split(':');
+      const iterations  = parseInt(parties[2]);
+      const salt        = parties[3];
+      const hashAttendu = parties[4];
+      return new Promise((resolve) => {
+        crypto.pbkdf2(motDePasse, salt, iterations, 32, 'sha256', (err, buf) => {
+          if (err) return resolve(false);
+          resolve(buf.toString('hex') === hashAttendu);
+        });
+      });
+    }
+    const bcrypt = require('bcrypt');
+    return await bcrypt.compare(motDePasse, hashStocke);
+  } catch { return false; }
+}
 
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
@@ -18,7 +41,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ erreur: 'Email ou mot de passe incorrect.' });
     }
     const user = result.rows[0];
-    const valide = await bcrypt.compare(mot_de_passe, user.mot_de_passe);
+    const valide = await verifierMotDePasse(mot_de_passe, user.mot_de_passe);
     if (!valide) {
       return res.status(401).json({ erreur: 'Email ou mot de passe incorrect.' });
     }

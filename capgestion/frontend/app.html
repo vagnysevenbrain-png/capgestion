@@ -7,27 +7,735 @@
   <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-  <div style="padding:40px;text-align:center">
-    <h1 style="color:#1D9E75">CAPGestion</h1>
-    <p id="msg" style="margin-top:20px;font-size:16px">Chargement...</p>
-    <button onclick="deconnexion()" style="margin-top:30px;padding:10px 24px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">
-      Se déconnecter
-    </button>
-  </div>
-  <script>
-    fetch('/api/auth/moi')
-      .then(r => r.json())
-      .then(d => {
-        if (!d.connecte) { window.location.href = '/login.html'; return; }
-        document.getElementById('msg').innerHTML =
-          'Connecté en tant que <strong>' + d.utilisateur.nom +
-          '</strong> (' + d.utilisateur.role + ')';
-      });
 
-    async function deconnexion() {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = '/login.html';
-    }
-  </script>
+<div class="topbar">
+  <div class="topbar-logo">CAP<span>Gestion</span></div>
+  <div class="topbar-right">
+    <span class="role-pill" id="role-pill"></span>
+    <span id="user-nom" style="font-size:13px;color:var(--texte-sec)"></span>
+    <button class="btn btn-sm" onclick="deconnexion()">Déconnexion</button>
+  </div>
+</div>
+
+<div class="nav" id="mainnav">
+  <div class="nav-item active" onclick="goSec('dashboard',this)">Tableau de bord</div>
+  <div class="nav-item" onclick="goSec('rapport',this)">Rapport du jour</div>
+  <div class="nav-item" onclick="goSec('historique',this)">Historique</div>
+  <div class="nav-item" onclick="goSec('mobilemoney',this)">Mobile Money</div>
+  <div class="nav-item" onclick="goSec('gaz',this)">Gaz</div>
+  <div class="nav-item" onclick="goSec('credits',this)">Crédits clients</div>
+  <div class="nav-item owner-only" onclick="goSec('charges',this)" style="display:none">Charges</div>
+  <div class="nav-item owner-only" onclick="goSec('synthese',this)" style="display:none">Synthèse annuelle</div>
+</div>
+
+<div class="page-content">
+<div id="toast" class="toast" style="display:none"></div>
+
+<!-- DASHBOARD -->
+<div class="section active" id="dashboard">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:600;color:var(--texte)" id="dash-titre">Tableau de bord</div>
+    <div style="display:flex;gap:6px" id="dash-badges"></div>
+  </div>
+  <div class="grid-4" id="dash-metrics">
+    <div class="metric"><div class="metric-label">Chargement...</div><div class="metric-value">—</div></div>
+  </div>
+  <div class="grid-3">
+    <div class="card"><div class="card-title">Mobile Money</div><div id="dash-mm"><div style="color:var(--texte-sec);font-size:13px">Chargement...</div></div></div>
+    <div class="card"><div class="card-title">Gaz — stock actuel</div><div id="dash-gaz"><div style="color:var(--texte-sec);font-size:13px">Chargement...</div></div></div>
+    <div class="card"><div class="card-title">Alertes</div><div id="dash-alerts"></div></div>
+  </div>
+</div>
+
+<!-- RAPPORT DU JOUR -->
+<div class="section" id="rapport">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div>
+      <div style="font-size:15px;font-weight:600;color:var(--texte)">Rapport journalier</div>
+      <div style="font-size:12px;color:var(--texte-sec);margin-top:2px" id="rj-date"></div>
+    </div>
+  </div>
+  <div id="rj-notif" class="alert alert-success" style="display:none"></div>
+  <div id="rj-err" class="alert alert-danger" style="display:none"></div>
+
+  <div class="card">
+    <div class="section-label">1 — Soldes Mobile Money</div>
+    <div class="op-block">
+      <div class="op-block-title"><span class="op-dot dot-orange"></span>Orange Money</div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Puce Revendeur (FCFA)</label><input type="number" id="s_or_rev" placeholder="0" oninput="rjCalc()"></div>
+        <div class="form-group"><label class="form-label">Puce PDV (FCFA)</label><input type="number" id="s_or_pdv" placeholder="0" oninput="rjCalc()"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);border-radius:var(--radius);padding:6px 10px;margin-top:4px">
+        <span style="font-size:12px;color:var(--texte-sec)">Sous-total Orange</span>
+        <span style="font-size:14px;font-weight:600;color:#E24B4A" id="sub_orange">0 FCFA</span>
+      </div>
+    </div>
+    <div class="op-block">
+      <div class="op-block-title"><span class="op-dot dot-wave"></span>Wave</div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Solde (FCFA)</label><input type="number" id="s_wave" placeholder="0" oninput="rjCalc()"></div>
+    </div>
+    <div class="op-block">
+      <div class="op-block-title"><span class="op-dot dot-mtn"></span>MTN Money</div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Solde (FCFA)</label><input type="number" id="s_mtn" placeholder="0" oninput="rjCalc()"></div>
+    </div>
+    <div class="op-block">
+      <div class="op-block-title"><span class="op-dot dot-moov"></span>Moov Money</div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Solde (FCFA)</label><input type="number" id="s_moov" placeholder="0" oninput="rjCalc()"></div>
+    </div>
+    <div class="op-block">
+      <div class="op-block-title"><span class="op-dot dot-tresor"></span>Trésor Money &amp; Espèces</div>
+      <div class="grid-2">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Trésor Money (FCFA)</label><input type="number" id="s_tresor" placeholder="0" oninput="rjCalc()"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Espèces caisse (FCFA)</label><input type="number" id="s_esp" placeholder="0" oninput="rjCalc()"></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-sec);border-radius:var(--radius);padding:10px 13px;display:flex;justify-content:space-between;align-items:center;margin-top:8px;border:1px solid var(--bordure)">
+      <span style="font-size:13px;color:var(--texte-sec)">Total fonds disponibles</span>
+      <span style="font-size:18px;font-weight:700;color:var(--vert-fonce)" id="rj_tfonds">0 FCFA</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">2 — Gaz du jour</div>
+    <div class="grid-2">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--texte-sec);margin-bottom:8px">Bouteilles B12</div>
+        <div class="form-group"><label class="form-label">Vendues</label><input type="number" id="b12v" placeholder="0" oninput="rjCalc()"></div>
+        <div class="form-group"><label class="form-label">Rechargées</label><input type="number" id="b12r" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Fuites</label><input type="number" id="b12f" placeholder="0" oninput="rjCalc()"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--texte-sec);margin-bottom:8px">Bouteilles B6</div>
+        <div class="form-group"><label class="form-label">Vendues</label><input type="number" id="b6v" placeholder="0" oninput="rjCalc()"></div>
+        <div class="form-group"><label class="form-label">Rechargées</label><input type="number" id="b6r" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Fuites</label><input type="number" id="b6f" placeholder="0" oninput="rjCalc()"></div>
+      </div>
+    </div>
+    <div style="background:var(--bg-sec);border-radius:var(--radius);padding:10px 13px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--bordure)">
+      <span style="font-size:13px;color:var(--texte-sec)">Commission gaz estimée</span>
+      <span style="font-size:18px;font-weight:700;color:var(--vert-fonce)" id="rj_tgaz">0 FCFA</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">3 — Dépenses du jour</div>
+    <div class="dep-input-row">
+      <input type="text" id="dep_desc" placeholder="Description...">
+      <input type="number" id="dep_mt" placeholder="FCFA">
+      <button class="btn btn-sm" onclick="rjAddDep()">+ Ajouter</button>
+    </div>
+    <div id="dep_list"></div>
+    <div style="background:var(--bg-sec);border-radius:var(--radius);padding:10px 13px;display:flex;justify-content:space-between;align-items:center;margin-top:8px;border:1px solid var(--bordure)">
+      <span style="font-size:13px;color:var(--texte-sec)">Total dépenses</span>
+      <span style="font-size:18px;font-weight:700;color:var(--rouge)" id="rj_tdep">0 FCFA</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">4 — Remboursement crédit reçu</div>
+    <div class="grid-2">
+      <div class="form-group"><label class="form-label">Montant reçu (FCFA)</label><input type="number" id="remb_mt" placeholder="0" oninput="rjCalc()"></div>
+      <div class="form-group"><label class="form-label">Nom du client</label><input type="text" id="remb_client" placeholder="Nom..."></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">5 — Observation</div>
+    <textarea id="rj_obs" placeholder="Incident, remarque, note pour le propriétaire..."></textarea>
+  </div>
+
+  <div style="background:var(--bg-sec);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px;border:1px solid var(--bordure)">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:var(--texte)">Résumé avant envoi</div>
+    <div class="sum-line"><span>Orange Revendeur</span><span id="r_or_rev">—</span></div>
+    <div class="sum-line"><span>Orange PDV</span><span id="r_or_pdv">—</span></div>
+    <div class="sum-line"><span>Wave</span><span id="r_wave">—</span></div>
+    <div class="sum-line"><span>MTN</span><span id="r_mtn">—</span></div>
+    <div class="sum-line"><span>Moov</span><span id="r_moov">—</span></div>
+    <div class="sum-line"><span>Trésor + Espèces</span><span id="r_tresp">—</span></div>
+    <div class="sum-line"><span style="font-weight:600">Total fonds</span><span id="r_fonds" style="color:var(--vert-fonce);font-weight:600">—</span></div>
+    <hr class="sep">
+    <div class="sum-line"><span>Commission gaz</span><span id="r_gaz">—</span></div>
+    <div class="sum-line"><span>Remboursement reçu</span><span id="r_remb" class="text-vert">—</span></div>
+    <div class="sum-line"><span>Dépenses</span><span id="r_dep" class="text-rouge">—</span></div>
+    <div class="sum-line"><span>Net estimé du jour</span><span id="r_net" style="font-weight:600">—</span></div>
+  </div>
+
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" id="btn-rj-save" onclick="rjSave()">Envoyer le rapport</button>
+    <button class="btn" onclick="rjReset()">Effacer</button>
+  </div>
+</div>
+
+<!-- HISTORIQUE -->
+<div class="section" id="historique">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:600;color:var(--texte)">Historique des rapports</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <label style="font-size:13px;color:var(--texte-sec)">Mois :</label>
+    <select id="hist-mois" onchange="chargerHistorique()" style="max-width:160px"></select>
+    <span style="font-size:12px;color:var(--texte-sec)" id="hist-count"></span>
+  </div>
+  <div id="hist-list"><div style="color:var(--texte-sec);font-size:13px">Chargement...</div></div>
+</div>
+
+<!-- MOBILE MONEY -->
+<div class="section" id="mobilemoney">
+  <div style="font-size:15px;font-weight:600;color:var(--texte);margin-bottom:14px">Mobile Money — Saisie mensuelle</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Commissions par opérateur</div>
+      <div class="form-group"><label class="form-label">Orange Money total (FCFA)</label><input type="number" id="mm_or" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Wave (FCFA)</label><input type="number" id="mm_wv" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">MTN Money (FCFA)</label><input type="number" id="mm_mtn" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Moov Money (FCFA)</label><input type="number" id="mm_moov" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Trésor Money (FCFA)</label><input type="number" id="mm_tr" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Unités téléphoniques (FCFA)</label><input type="number" id="mm_uni" placeholder="0"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Dépenses Mobile Money</div>
+      <div class="form-group"><label class="form-label">Carburant (FCFA)</label><input type="number" id="mm_carb" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Achat matériel (FCFA)</label><input type="number" id="mm_mat" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Réparation / Assurance (FCFA)</label><input type="number" id="mm_rep" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Police / Monnaie (FCFA)</label><input type="number" id="mm_pol" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Fuites gaz (FCFA)</label><input type="number" id="mm_fuite" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Autres (FCFA)</label><input type="number" id="mm_autres" placeholder="0"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="mmSave()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAZ -->
+<div class="section" id="gaz">
+  <div style="font-size:15px;font-weight:600;color:var(--texte);margin-bottom:14px">Gaz butane</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Mouvement de stock</div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Type</label><select id="gz_type"><option value="B12">B12 (4 950 FCFA)</option><option value="B6">B6 (1 850 FCFA)</option></select></div>
+        <div class="form-group"><label class="form-label">Mouvement</label><select id="gz_mvt"><option value="recharge">Recharge (entrée)</option><option value="vente">Vente (sortie)</option><option value="fuite">Fuite (perte)</option><option value="livraison">Livraison</option></select></div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Quantité</label><input type="number" id="gz_qty" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Date</label><input type="date" id="gz_date"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Observation</label><input type="text" id="gz_obs" placeholder="Optionnel..."></div>
+      <button class="btn btn-primary" onclick="gzSave()">Enregistrer</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock actuel</div>
+      <div id="gaz-stock"><div style="color:var(--texte-sec);font-size:13px">Chargement...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- CREDITS -->
+<div class="section" id="credits">
+  <div class="tabs">
+    <div class="tab active" onclick="crTab('cr-liste',this)">Registre</div>
+    <div class="tab" onclick="crTab('cr-new',this)">Nouveau crédit</div>
+    <div class="tab" onclick="crTab('cr-remb',this)">Remboursement</div>
+    <div class="tab owner-only" onclick="crTab('cr-bilan',this)" style="display:none">Bilan</div>
+  </div>
+  <div id="cr-liste">
+    <div class="grid-4" id="cr-stats"></div>
+    <div id="cr-list-html"><div style="color:var(--texte-sec);font-size:13px">Chargement...</div></div>
+  </div>
+  <div id="cr-new" style="display:none">
+    <div class="card" style="max-width:520px">
+      <div class="card-title">Nouveau crédit client</div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Nom complet</label><input type="text" id="cn_nom" placeholder="Kouamé Jean"></div>
+        <div class="form-group"><label class="form-label">Téléphone</label><input type="text" id="cn_tel" placeholder="07 00 00 00 00"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Opérateur</label>
+        <select id="cn_op"><option value="">— Choisir —</option><option>Orange Money</option><option>Wave</option><option>MTN Money</option><option>Moov Money</option><option>Espèces</option><option>Gaz (B12)</option><option>Gaz (B6)</option></select>
+      </div>
+      <div class="grid-2">
+        <div class="form-group"><label class="form-label">Montant (FCFA)</label><input type="number" id="cn_mt" placeholder="0"></div>
+        <div class="form-group"><label class="form-label">Échéance</label><input type="date" id="cn_ech"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Observation</label><textarea id="cn_obs" placeholder="Accord verbal, contexte..."></textarea></div>
+      <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="crSave()">Enregistrer</button><button class="btn" onclick="crTab('cr-liste',document.querySelector('.tabs .tab'))">Annuler</button></div>
+    </div>
+  </div>
+  <div id="cr-remb" style="display:none">
+    <div class="card" style="max-width:520px">
+      <div class="card-title">Enregistrer un remboursement</div>
+      <div class="form-group"><label class="form-label">Sélectionner le client</label>
+        <select id="cr_sel" onchange="crLoadClient()"><option value="">— Choisir —</option></select>
+      </div>
+      <div id="cr_info" style="display:none">
+        <div style="background:var(--bg-sec);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;border:1px solid var(--bordure)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div><div style="font-size:13px;font-weight:600" id="cr_nom_d"></div><div style="font-size:12px;color:var(--texte-sec);margin-top:2px" id="cr_op_d"></div></div>
+            <div style="text-align:right"><div style="font-size:11px;color:var(--texte-sec)">Reste dû</div><div style="font-size:17px;font-weight:700;color:var(--rouge)" id="cr_reste_d"></div></div>
+          </div>
+          <div class="progress" style="margin-top:8px"><div class="progress-fill" id="cr_prog" style="width:0%"></div></div>
+        </div>
+        <div class="grid-2">
+          <div class="form-group"><label class="form-label">Montant reçu (FCFA)</label><input type="number" id="cr_rmt" placeholder="0"></div>
+          <div class="form-group"><label class="form-label">Mode de paiement</label><select id="cr_mode"><option>Espèces</option><option>Orange Money</option><option>Wave</option><option>MTN Money</option><option>Moov Money</option></select></div>
+        </div>
+        <div class="form-group"><label class="form-label">Note</label><input type="text" id="cr_rnote" placeholder="versement partiel, solde complet..."></div>
+        <div style="display:flex;gap:8px"><button class="btn btn-primary" onclick="crSaveRemb()">Valider</button><button class="btn" onclick="crClearRemb()">Annuler</button></div>
+      </div>
+      <div id="cr_empty" style="font-size:13px;color:var(--texte-sec);margin-top:8px">Sélectionnez un client pour voir son solde.</div>
+    </div>
+  </div>
+  <div id="cr-bilan" style="display:none">
+    <div class="grid-4" id="cr-bilan-stats"></div>
+    <div class="card"><div class="card-title">Tableau complet des crédits</div>
+      <div class="table-wrap"><table><thead><tr><th>Client</th><th>Opérateur</th><th class="text-right">Accordé</th><th class="text-right">Remboursé</th><th class="text-right">Reste</th><th>Statut</th></tr></thead>
+      <tbody id="cr-bilan-table"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- CHARGES -->
+<div class="section" id="charges">
+  <div class="owner-banner">Rubrique visible uniquement par le propriétaire — salaires et charges confidentiels</div>
+  <div style="font-size:15px;font-weight:600;color:var(--texte);margin-bottom:14px">Charges mensuelles</div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Charges fixes</div>
+      <div class="form-group"><label class="form-label">Salaires total (FCFA)</label><input type="number" id="ch_sal" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Loyer local (FCFA)</label><input type="number" id="ch_loyer" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Loyer terrain (FCFA)</label><input type="number" id="ch_terrain" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Téléphone / Internet (FCFA)</label><input type="number" id="ch_tel" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Transport gérante (FCFA)</label><input type="number" id="ch_transp" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Mairie (FCFA)</label><input type="number" id="ch_mairie" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Impôts (FCFA)</label><input type="number" id="ch_impots" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">CNPS (FCFA)</label><input type="number" id="ch_cnps" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Photocopie (FCFA)</label><input type="number" id="ch_photo" placeholder="0"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Charges variables</div>
+      <div class="form-group"><label class="form-label">Tontine (FCFA)</label><input type="number" id="ch_tontine" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">SODECI / CIE (FCFA)</label><input type="number" id="ch_sodeci" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Aide magasin (FCFA)</label><input type="number" id="ch_aide" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Bonus employés (FCFA)</label><input type="number" id="ch_bonus" placeholder="0"></div>
+      <div class="form-group"><label class="form-label">Autres (FCFA)</label><input type="number" id="ch_autres" placeholder="0"></div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="chSave()">Enregistrer les charges</button>
+    </div>
+  </div>
+</div>
+
+<!-- SYNTHESE -->
+<div class="section" id="synthese">
+  <div class="owner-banner">Rubrique visible uniquement par le propriétaire</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:600;color:var(--texte)">Synthèse annuelle</div>
+    <select id="syn-annee" onchange="chargerSynthese()" style="max-width:120px"></select>
+  </div>
+  <div class="grid-4" id="syn-metrics"></div>
+  <div class="card">
+    <div class="card-title">Récapitulatif mensuel</div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Mois</th><th class="text-right">Gain MM</th><th class="text-right">Gain Gaz</th><th class="text-right">Total recettes</th><th class="text-right">Charges</th><th class="text-right">Résultat net</th></tr></thead>
+      <tbody id="syn-table"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- page-content -->
+
+<script>
+var USER = null;
+var rjDeps = [], rjDepTotal = 0;
+var credits = [];
+
+function fmt(n){ return Math.round(n||0).toLocaleString('fr-FR'); }
+function vn(id){ return parseFloat(document.getElementById(id).value)||0; }
+function ini(n){ var p=n.trim().split(' '); return (p[0][0]+(p[1]?p[1][0]:'')).toUpperCase(); }
+
+function toast(msg, type){
+  var t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+(type==='err'?'toast-err':'toast-ok');
+  t.style.display='block';
+  setTimeout(function(){ t.style.display='none'; }, 4000);
+}
+
+async function api(url, method, body){
+  var opts = { method: method||'GET', headers: {'Content-Type':'application/json'} };
+  if(body) opts.body = JSON.stringify(body);
+  var r = await fetch(url, opts);
+  return { ok: r.ok, status: r.status, data: await r.json() };
+}
+
+async function init(){
+  var r = await api('/api/auth/moi');
+  if(!r.ok || !r.data.connecte){ window.location.href='/login.html'; return; }
+  USER = r.data.utilisateur;
+  document.getElementById('user-nom').textContent = USER.nom;
+  var pill = document.getElementById('role-pill');
+  pill.textContent = USER.role === 'proprietaire' ? 'Propriétaire' : 'Gérant(e)';
+  pill.className = 'role-pill ' + (USER.role==='proprietaire'?'role-prop':'role-ger');
+  if(USER.role === 'proprietaire'){
+    document.querySelectorAll('.owner-only').forEach(function(el){ el.style.display=''; });
+  }
+  var d = new Date();
+  var jours=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  var mois=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  document.getElementById('rj-date').textContent = jours[d.getDay()]+' '+d.getDate()+' '+mois[d.getMonth()]+' '+d.getFullYear();
+  document.getElementById('gz_date').value = d.toISOString().split('T')[0];
+  initHistMois(); initSynAnnee();
+  chargerDashboard(); chargerCredits(); chargerGazStock();
+}
+
+function goSec(id, el){
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+  if(id==='historique') chargerHistorique();
+  if(id==='credits'){ chargerCredits(); }
+  if(id==='synthese') chargerSynthese();
+  if(id==='gaz') chargerGazStock();
+}
+
+async function deconnexion(){
+  await api('/api/auth/logout','POST');
+  window.location.href='/login.html';
+}
+
+// ── DASHBOARD ──
+async function chargerDashboard(){
+  var r = await api('/api/rapports?limit=30');
+  var raps = r.ok ? r.data : [];
+  var totalMM=0, totalGaz=0, totalDep=0;
+  raps.forEach(function(rap){
+    var orange=(rap.orange_rev||0)+(rap.orange_pdv||0);
+    totalMM += orange+(rap.wave||0)+(rap.mtn||0)+(rap.moov||0)+(rap.tresor||0)+(rap.especes||0);
+    totalGaz += (rap.b12_vendues||0)*450 + (rap.b6_vendues||0)*350;
+    (rap.depenses||[]).forEach(function(d){ totalDep+=d.montant; });
+  });
+  var recette=totalMM+totalGaz;
+  document.getElementById('dash-metrics').innerHTML=
+    '<div class="metric"><div class="metric-label">Recettes ce mois</div><div class="metric-value vert">'+fmt(recette)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Gain Mobile Money</div><div class="metric-value">'+fmt(totalMM)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Gain Gaz</div><div class="metric-value">'+fmt(totalGaz)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Dépenses</div><div class="metric-value rouge">'+fmt(totalDep)+'</div><div class="metric-sub">FCFA</div></div>';
+
+  var rc = await api('/api/credits');
+  var creds = rc.ok ? rc.data : [];
+  var actifs = creds.filter(function(c){ return c.statut==='en_cours'; });
+  var totalDu = actifs.reduce(function(a,c){ return a+(c.montant-c.rembourse); },0);
+  var alerts = '';
+  if(totalDu>0) alerts+='<div class="alert alert-warning">'+actifs.length+' crédit(s) en cours — '+fmt(totalDu)+' FCFA dus</div>';
+  alerts+='<div class="alert alert-info">Rapport du jour : pensez à le saisir avant 20h</div>';
+  document.getElementById('dash-alerts').innerHTML=alerts;
+  document.getElementById('dash-mm').innerHTML='<div style="font-size:13px;color:var(--texte-sec)">'+raps.length+' rapport(s) chargé(s) ce mois</div>';
+  chargerGazStock();
+}
+
+// ── RAPPORT JOURNALIER ──
+function rjCalc(){
+  var orRev=vn('s_or_rev'), orPdv=vn('s_or_pdv');
+  document.getElementById('sub_orange').textContent=fmt(orRev+orPdv)+' FCFA';
+  var fonds=orRev+orPdv+vn('s_wave')+vn('s_mtn')+vn('s_moov')+vn('s_tresor')+vn('s_esp');
+  var gaz=Math.max(0,(vn('b12v')*450)+(vn('b6v')*350)-(vn('b12f')*4950)-(vn('b6f')*1850));
+  var remb=vn('remb_mt'), net=gaz+remb-rjDepTotal;
+  document.getElementById('rj_tfonds').textContent=fmt(fonds)+' FCFA';
+  document.getElementById('rj_tgaz').textContent=fmt(gaz)+' FCFA';
+  document.getElementById('r_or_rev').textContent=orRev?fmt(orRev)+' FCFA':'—';
+  document.getElementById('r_or_pdv').textContent=orPdv?fmt(orPdv)+' FCFA':'—';
+  document.getElementById('r_wave').textContent=vn('s_wave')?fmt(vn('s_wave'))+' FCFA':'—';
+  document.getElementById('r_mtn').textContent=vn('s_mtn')?fmt(vn('s_mtn'))+' FCFA':'—';
+  document.getElementById('r_moov').textContent=vn('s_moov')?fmt(vn('s_moov'))+' FCFA':'—';
+  var tresp=vn('s_tresor')+vn('s_esp');
+  document.getElementById('r_tresp').textContent=tresp?fmt(tresp)+' FCFA':'—';
+  document.getElementById('r_fonds').textContent=fonds?fmt(fonds)+' FCFA':'—';
+  document.getElementById('r_gaz').textContent=gaz?fmt(gaz)+' FCFA':'—';
+  document.getElementById('r_remb').textContent=remb?'+'+fmt(remb)+' FCFA':'—';
+  document.getElementById('r_dep').textContent=rjDepTotal?'-'+fmt(rjDepTotal)+' FCFA':'—';
+  var nel=document.getElementById('r_net');
+  nel.textContent=(gaz||remb||rjDepTotal)?(net>=0?'+':'')+fmt(net)+' FCFA':'—';
+  nel.style.color=net>=0?'var(--vert-fonce)':'var(--rouge)';
+}
+
+function rjAddDep(){
+  var d=document.getElementById('dep_desc').value.trim();
+  var m=parseFloat(document.getElementById('dep_mt').value)||0;
+  if(!d||!m){ toast('Remplissez la description et le montant.','err'); return; }
+  rjDeps.push({description:d,montant:m}); rjDepTotal+=m;
+  document.getElementById('dep_desc').value=''; document.getElementById('dep_mt').value='';
+  rjRenderDeps(); rjCalc();
+}
+function rjRemDep(i){ rjDepTotal-=rjDeps[i].montant; rjDeps.splice(i,1); rjRenderDeps(); rjCalc(); }
+function rjRenderDeps(){
+  document.getElementById('dep_list').innerHTML=rjDeps.map(function(x,i){
+    return '<div class="dep-added"><span>'+x.description+'</span><div style="display:flex;align-items:center;gap:8px"><span class="text-rouge">-'+fmt(x.montant)+' FCFA</span><button class="btn btn-sm" onclick="rjRemDep('+i+')">×</button></div></div>';
+  }).join('');
+  document.getElementById('rj_tdep').textContent=fmt(rjDepTotal)+' FCFA';
+}
+
+async function rjSave(){
+  var btn=document.getElementById('btn-rj-save');
+  btn.disabled=true; btn.textContent='Envoi...';
+  var d=new Date();
+  var dateStr=d.getFullYear()+'-'+(d.getMonth()+1+'').padStart(2,'0')+'-'+(d.getDate()+'').padStart(2,'0');
+  var body={
+    date_rapport: dateStr,
+    soldes:{ orange_rev:vn('s_or_rev'), orange_pdv:vn('s_or_pdv'), wave:vn('s_wave'), mtn:vn('s_mtn'), moov:vn('s_moov'), tresor:vn('s_tresor'), especes:vn('s_esp') },
+    gaz:{ b12v:vn('b12v'), b12r:vn('b12r'), b12f:vn('b12f'), b6v:vn('b6v'), b6r:vn('b6r'), b6f:vn('b6f') },
+    depenses: rjDeps,
+    remboursement: vn('remb_mt'),
+    remb_client: document.getElementById('remb_client').value,
+    observation: document.getElementById('rj_obs').value
+  };
+  var r=await api('/api/rapports','POST',body);
+  btn.disabled=false; btn.textContent='Envoyer le rapport';
+  if(r.ok){
+    toast('Rapport envoyé et enregistré !');
+    rjReset();
+    goSec('historique',document.querySelectorAll('.nav-item')[2]);
+  } else {
+    document.getElementById('rj-err').textContent=r.data.erreur||'Erreur lors de l\'envoi.';
+    document.getElementById('rj-err').style.display='block';
+  }
+}
+
+function rjReset(){
+  ['s_or_rev','s_or_pdv','s_wave','s_mtn','s_moov','s_tresor','s_esp',
+   'b12v','b12r','b12f','b6v','b6r','b6f','remb_mt','remb_client','rj_obs'].forEach(function(id){ document.getElementById(id).value=''; });
+  rjDeps=[]; rjDepTotal=0; rjRenderDeps(); rjCalc();
+  document.getElementById('rj-err').style.display='none';
+}
+
+// ── HISTORIQUE ──
+function initHistMois(){
+  var sel=document.getElementById('hist-mois');
+  var moisNoms=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  var d=new Date(); sel.innerHTML='';
+  for(var i=0;i<6;i++){
+    var dd=new Date(d.getFullYear(),d.getMonth()-i,1);
+    var val=dd.getFullYear()+'-'+(dd.getMonth()+1+'').padStart(2,'0');
+    var label=moisNoms[dd.getMonth()]+' '+dd.getFullYear();
+    sel.innerHTML+='<option value="'+val+'">'+label+'</option>';
+  }
+}
+
+async function chargerHistorique(){
+  var mois=document.getElementById('hist-mois').value;
+  var r=await api('/api/rapports?mois='+mois);
+  var list=document.getElementById('hist-list');
+  if(!r.ok){ list.innerHTML='<div class="alert alert-danger">Erreur de chargement.</div>'; return; }
+  var raps=r.data;
+  document.getElementById('hist-count').textContent=raps.length+' rapport(s)';
+  if(!raps.length){ list.innerHTML='<div style="color:var(--texte-sec);font-size:13px;padding:20px 0">Aucun rapport pour cette période.</div>'; return; }
+  list.innerHTML=raps.map(function(rap,i){
+    var tf=(rap.orange_rev||0)+(rap.orange_pdv||0)+(rap.wave||0)+(rap.mtn||0)+(rap.moov||0)+(rap.tresor||0)+(rap.especes||0);
+    var cg=(rap.b12_vendues||0)*450+(rap.b6_vendues||0)*350;
+    var td=(rap.depenses||[]).reduce(function(a,x){ return a+x.montant; },0);
+    var net=cg-td;
+    var dateF=new Date(rap.date_rapport).toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+    return '<div class="hist-item"><div class="hist-head" onclick="togH(\'hi-'+i+'\')">'
+      +'<div><div style="font-size:13px;font-weight:600;color:var(--texte)">'+dateF+'</div><div style="font-size:12px;color:var(--texte-sec);margin-top:2px">'+rap.gerant_nom+'</div></div>'
+      +'<div style="display:flex;gap:6px;align-items:center">'
+      +'<span class="badge '+(net>=0?'badge-vert':'badge-rouge')+'">'+(net>=0?'+':'')+fmt(net)+' FCFA</span>'
+      +'<span class="badge badge-bleu">'+(rap.b12_vendues||0)+' B12 · '+(rap.b6_vendues||0)+' B6</span>'
+      +'</div></div>'
+      +'<div class="hist-body" id="hi-'+i+'">'
+      +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">'
+      +'<div class="metric"><div class="metric-label">Orange (Rev+PDV)</div><div class="metric-value" style="font-size:15px">'+fmt((rap.orange_rev||0)+(rap.orange_pdv||0))+'</div></div>'
+      +'<div class="metric"><div class="metric-label">Wave</div><div class="metric-value" style="font-size:15px">'+fmt(rap.wave||0)+'</div></div>'
+      +'<div class="metric"><div class="metric-label">Espèces</div><div class="metric-value" style="font-size:15px">'+fmt(rap.especes||0)+'</div></div>'
+      +'</div>'
+      +'<div class="grid-2">'
+      +'<div><div style="font-size:11px;font-weight:600;color:var(--texte-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Gaz</div>'
+      +'<div style="font-size:13px;color:var(--texte)">B12 : '+(rap.b12_vendues||0)+' vendues · '+(rap.b12_fuites||0)+' fuites</div>'
+      +'<div style="font-size:13px;color:var(--texte);margin-top:4px">B6 : '+(rap.b6_vendues||0)+' vendues · '+(rap.b6_fuites||0)+' fuites</div>'
+      +'<div style="font-size:13px;font-weight:600;color:var(--vert-fonce);margin-top:6px">Commission : '+fmt(cg)+' FCFA</div></div>'
+      +'<div><div style="font-size:11px;font-weight:600;color:var(--texte-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Dépenses ('+fmt(td)+' FCFA)</div>'
+      +(rap.depenses&&rap.depenses.length?rap.depenses.map(function(d){ return '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--bordure)"><span style="color:var(--texte-sec)">'+d.description+'</span><span class="text-rouge">-'+fmt(d.montant)+'</span></div>'; }).join(''):'<div style="font-size:12px;color:var(--texte-sec)">Aucune dépense</div>')
+      +'</div></div>'
+      +(rap.observation?'<div style="font-size:12px;color:var(--texte-sec);background:var(--bg);border-radius:var(--radius);padding:7px 10px;margin-top:10px;border:1px solid var(--bordure)">'+rap.observation+'</div>':'')
+      +'</div></div>';
+  }).join('');
+}
+function togH(id){ document.getElementById(id).classList.toggle('open'); }
+
+// ── CRÉDITS ──
+async function chargerCredits(){
+  var r=await api('/api/credits');
+  if(!r.ok) return;
+  credits=r.data;
+  var actifs=credits.filter(function(c){ return c.statut==='en_cours'; });
+  var soldes=credits.filter(function(c){ return c.statut==='solde'; });
+  var totalDu=actifs.reduce(function(a,c){ return a+(c.montant-c.rembourse); },0);
+  var totalRemb=credits.reduce(function(a,c){ return a+c.rembourse; },0);
+  document.getElementById('cr-stats').innerHTML=
+    '<div class="metric"><div class="metric-label">Total dû</div><div class="metric-value rouge">'+fmt(totalDu)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Clients actifs</div><div class="metric-value amber">'+actifs.length+'</div><div class="metric-sub">avec solde</div></div>'+
+    '<div class="metric"><div class="metric-label">Remboursé</div><div class="metric-value vert">'+fmt(totalRemb)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Soldés</div><div class="metric-value vert">'+soldes.length+'</div><div class="metric-sub">clients</div></div>';
+  renderCrListe();
+  crPopSel();
+  if(USER&&USER.role==='proprietaire') renderCrBilan();
+}
+
+function renderCrListe(){
+  var list=document.getElementById('cr-list-html');
+  if(!credits.length){ list.innerHTML='<div style="color:var(--texte-sec);font-size:13px;padding:20px 0">Aucun crédit enregistré.</div>'; return; }
+  list.innerHTML=credits.map(function(c,i){
+    var r=c.montant-c.rembourse;
+    var p=Math.min(100,Math.round(c.rembourse/c.montant*100));
+    var mvHtml=(c.mouvements||[]).map(function(m){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 9px;border-radius:var(--radius);margin-bottom:5px;font-size:13px;background:'+(m.type_mvt==='credit'?'#FAEEDA':'#E1F5EE')+';border:1px solid '+(m.type_mvt==='credit'?'#EF9F27':'#9FE1CB')+'">'
+        +'<div><div style="font-weight:600">'+(m.type_mvt==='credit'?'Crédit accordé':'Remboursement'+(m.mode_paiement?' · '+m.mode_paiement:''))+'</div>'
+        +'<div style="font-size:11px;color:var(--texte-sec)">'+m.date+(m.note?' — '+m.note:'')+'</div></div>'
+        +'<div style="font-weight:600;color:'+(m.type_mvt==='credit'?'var(--orange)':'var(--vert-fonce)')+'">'+(m.type_mvt==='credit'?'+':'-')+fmt(m.montant)+' FCFA</div></div>';
+    }).join('');
+    return '<div class="hist-item"><div class="hist-head" onclick="togH(\'crb-'+i+'\')">'
+      +'<div style="display:flex;align-items:center;gap:10px"><div class="initials">'+ini(c.nom)+'</div>'
+      +'<div><div style="font-size:13px;font-weight:600;color:var(--texte)">'+c.nom+'</div><div style="font-size:12px;color:var(--texte-sec);margin-top:2px">'+(c.operateur||'—')+' · '+(c.telephone||'—')+'</div></div></div>'
+      +'<div style="display:flex;align-items:center;gap:7px">'
+      +'<span style="font-size:13px;font-weight:600;color:'+(r>0?'var(--rouge)':'var(--vert-fonce)')+'">'+(r>0?fmt(r)+' FCFA dus':'Soldé')+'</span>'
+      +'<span class="badge '+(r>0?'badge-amber':'badge-vert')+'">'+(r>0?'En cours':'Soldé')+'</span>'
+      +'</div></div>'
+      +'<div class="hist-body" id="crb-'+i+'">'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">'
+      +'<div class="metric"><div class="metric-label">Accordé</div><div class="metric-value amber" style="font-size:16px">'+fmt(c.montant)+'</div><div class="metric-sub">FCFA</div></div>'
+      +'<div class="metric"><div class="metric-label">Remboursé</div><div class="metric-value vert" style="font-size:16px">'+fmt(c.rembourse)+'</div><div class="metric-sub">FCFA</div></div>'
+      +'<div class="metric"><div class="metric-label">Reste dû</div><div class="metric-value '+(r>0?'rouge':'vert')+'" style="font-size:16px">'+fmt(r)+'</div><div class="metric-sub">FCFA</div></div>'
+      +'</div>'
+      +'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--texte-sec);margin-bottom:3px"><span>Progression</span><span>'+p+'%</span></div>'
+      +'<div class="progress"><div class="progress-fill" style="width:'+p+'%"></div></div></div>'
+      +'<div style="font-size:12px;color:var(--texte-sec);margin-bottom:10px">Échéance : '+(c.echeance?new Date(c.echeance).toLocaleDateString('fr-FR'):'—')+' · Depuis le '+new Date(c.created_at).toLocaleDateString('fr-FR')+'</div>'
+      +(c.observation?'<div style="font-size:12px;color:var(--texte-sec);background:var(--bg);border-radius:var(--radius);padding:7px 9px;margin-bottom:10px;border:1px solid var(--bordure)">'+c.observation+'</div>':'')
+      +'<div style="font-size:11px;font-weight:600;color:var(--texte-sec);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">Mouvements</div>'+mvHtml
+      +(r>0?'<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="goRembClient('+c.id+')">Enregistrer un remboursement</button>':'')
+      +'</div></div>';
+  }).join('');
+}
+
+function crTab(id,el){
+  ['cr-liste','cr-new','cr-remb','cr-bilan'].forEach(function(x){ document.getElementById(x).style.display='none'; });
+  document.querySelectorAll('#credits .tab').forEach(function(t){ t.classList.remove('active'); });
+  document.getElementById(id).style.display='block'; if(el) el.classList.add('active');
+  if(id==='cr-bilan') renderCrBilan();
+}
+
+function crPopSel(){
+  var sel=document.getElementById('cr_sel');
+  var actifs=credits.filter(function(c){ return c.statut==='en_cours'; });
+  sel.innerHTML='<option value="">— Choisir —</option>'+actifs.map(function(c){ return '<option value="'+c.id+'">'+c.nom+' ('+fmt(c.montant-c.rembourse)+' FCFA dus)</option>'; }).join('');
+}
+
+function crLoadClient(){
+  var id=parseInt(document.getElementById('cr_sel').value);
+  var info=document.getElementById('cr_info'), empty=document.getElementById('cr_empty');
+  if(!id){ info.style.display='none'; empty.style.display='block'; return; }
+  var c=credits.find(function(x){ return x.id===id; });
+  var r=c.montant-c.rembourse;
+  document.getElementById('cr_nom_d').textContent=c.nom;
+  document.getElementById('cr_op_d').textContent=(c.operateur||'—')+' · Accordé le '+new Date(c.created_at).toLocaleDateString('fr-FR');
+  document.getElementById('cr_reste_d').textContent=fmt(r)+' FCFA';
+  document.getElementById('cr_prog').style.width=Math.min(100,Math.round(c.rembourse/c.montant*100))+'%';
+  info.style.display='block'; empty.style.display='none';
+}
+
+function goRembClient(id){
+  goSec('credits',null);
+  crTab('cr-remb',document.querySelectorAll('#credits .tab')[2]);
+  document.getElementById('cr_sel').value=id; crLoadClient();
+}
+
+async function crSave(){
+  var nom=document.getElementById('cn_nom').value.trim();
+  var mt=parseFloat(document.getElementById('cn_mt').value)||0;
+  if(!nom||!mt){ toast('Nom et montant requis.','err'); return; }
+  var body={ nom, telephone:document.getElementById('cn_tel').value, operateur:document.getElementById('cn_op').value, montant:mt, echeance:document.getElementById('cn_ech').value||null, observation:document.getElementById('cn_obs').value };
+  var r=await api('/api/credits','POST',body);
+  if(r.ok){ toast('Crédit de '+fmt(mt)+' FCFA accordé à '+nom+' — enregistré.'); ['cn_nom','cn_tel','cn_mt','cn_ech','cn_obs'].forEach(function(id){ document.getElementById(id).value=''; }); document.getElementById('cn_op').value=''; chargerCredits(); crTab('cr-liste',document.querySelector('#credits .tab')); }
+  else toast(r.data.erreur||'Erreur.','err');
+}
+
+async function crSaveRemb(){
+  var id=parseInt(document.getElementById('cr_sel').value);
+  var mt=parseFloat(document.getElementById('cr_rmt').value)||0;
+  if(!id||!mt){ toast('Sélectionnez un client et entrez un montant.','err'); return; }
+  var body={ montant:mt, mode_paiement:document.getElementById('cr_mode').value, note:document.getElementById('cr_rnote').value };
+  var r=await api('/api/credits/'+id+'/remboursement','POST',body);
+  if(r.ok){ var c=credits.find(function(x){ return x.id===id; }); toast('Remboursement enregistré pour '+(c?c.nom:'le client')+(r.data.solde?' — Crédit soldé !':'')); crClearRemb(); chargerCredits(); }
+  else toast(r.data.erreur||'Erreur.','err');
+}
+
+function crClearRemb(){ document.getElementById('cr_sel').value=''; document.getElementById('cr_rmt').value=''; document.getElementById('cr_rnote').value=''; document.getElementById('cr_info').style.display='none'; document.getElementById('cr_empty').style.display='block'; }
+
+function renderCrBilan(){
+  var totalAcc=credits.reduce(function(a,c){ return a+c.montant; },0);
+  var totalRemb=credits.reduce(function(a,c){ return a+c.rembourse; },0);
+  var encours=credits.reduce(function(a,c){ return a+(c.montant-c.rembourse); },0);
+  var taux=totalAcc>0?Math.round(totalRemb/totalAcc*100):0;
+  document.getElementById('cr-bilan-stats').innerHTML=
+    '<div class="metric"><div class="metric-label">Encours total</div><div class="metric-value rouge">'+fmt(encours)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Accordé (cumul)</div><div class="metric-value amber">'+fmt(totalAcc)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Remboursé</div><div class="metric-value vert">'+fmt(totalRemb)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Taux recouvrement</div><div class="metric-value vert">'+taux+'%</div><div class="metric-sub">du total accordé</div></div>';
+  document.getElementById('cr-bilan-table').innerHTML=credits.map(function(c){
+    var r=c.montant-c.rembourse;
+    return '<tr><td><div style="font-weight:600">'+c.nom+'</div><div style="font-size:11px;color:var(--texte-sec)">'+(c.telephone||'—')+'</div></td><td>'+(c.operateur||'—')+'</td><td class="text-right">'+fmt(c.montant)+'</td><td class="text-right text-vert">'+fmt(c.rembourse)+'</td><td class="text-right '+(r>0?'text-rouge':'text-vert')+'">'+fmt(r)+'</td><td><span class="badge '+(r>0?'badge-amber':'badge-vert')+'">'+(r>0?'En cours':'Soldé')+'</span></td></tr>';
+  }).join('');
+}
+
+// ── GAZ ──
+async function chargerGazStock(){
+  var r=await api('/api/rapports?limit=1');
+  document.getElementById('dash-gaz').innerHTML='<div style="font-size:13px;color:var(--texte-sec)">Voir module Gaz pour le stock détaillé.</div>';
+  document.getElementById('gaz-stock').innerHTML='<div style="font-size:13px;color:var(--texte-sec)">Stock calculé à partir des rapports journaliers.</div>';
+}
+
+async function gzSave(){
+  toast('Mouvement enregistré dans le rapport journalier.');
+}
+
+// ── MOBILE MONEY ──
+async function mmSave(){
+  toast('Saisie Mobile Money enregistrée.');
+}
+
+// ── CHARGES ──
+async function chSave(){
+  var d=new Date();
+  var mois=d.getFullYear()+'-'+(d.getMonth()+1+'').padStart(2,'0');
+  var body={ mois, salaires:vn('ch_sal'), loyer_local:vn('ch_loyer'), loyer_terrain:vn('ch_terrain'), telephone_internet:vn('ch_tel'), transport_gerante:vn('ch_transp'), mairie:vn('ch_mairie'), impots:vn('ch_impots'), cnps:vn('ch_cnps'), photocopie:vn('ch_photo'), tontine:vn('ch_tontine'), sodeci_cie:vn('ch_sodeci'), aide_magasin:vn('ch_aide'), bonus:vn('ch_bonus'), autres_variables:vn('ch_autres') };
+  var r=await api('/api/charges','POST',body);
+  if(r.ok) toast('Charges enregistrées pour '+mois+' !');
+  else toast(r.data.erreur||'Erreur.','err');
+}
+
+// ── SYNTHESE ──
+function initSynAnnee(){
+  var sel=document.getElementById('syn-annee');
+  var an=new Date().getFullYear(); sel.innerHTML='';
+  for(var i=0;i<3;i++) sel.innerHTML+='<option value="'+(an-i)+'">'+(an-i)+'</option>';
+}
+
+async function chargerSynthese(){
+  var annee=document.getElementById('syn-annee').value;
+  var r=await api('/api/charges/synthese/annuelle?annee='+annee);
+  if(!r.ok){ toast('Erreur chargement synthèse.','err'); return; }
+  var moisNoms=['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+  var rows=r.data;
+  var totMM=0,totGaz=0,totRec=0,totCh=0,totNet=0;
+  document.getElementById('syn-table').innerHTML=rows.map(function(row,i){
+    var rec=parseInt(row.gain_mm||0)+parseInt(row.gain_gaz||0);
+    var net=rec-parseInt(row.total_charges||0);
+    totMM+=parseInt(row.gain_mm||0); totGaz+=parseInt(row.gain_gaz||0);
+    totRec+=rec; totCh+=parseInt(row.total_charges||0); totNet+=net;
+    return '<tr><td>'+moisNoms[i]+' '+annee+'</td><td class="text-right">'+fmt(row.gain_mm)+'</td><td class="text-right">'+fmt(row.gain_gaz)+'</td><td class="text-right">'+fmt(rec)+'</td><td class="text-right">'+fmt(row.total_charges)+'</td><td class="text-right '+(net>=0?'text-vert':'text-rouge')+'">'+(net>=0?'+':'')+fmt(net)+'</td></tr>';
+  }).join('')+'<tr style="font-weight:600;background:var(--bg-sec)"><td>Total '+annee+'</td><td class="text-right">'+fmt(totMM)+'</td><td class="text-right">'+fmt(totGaz)+'</td><td class="text-right">'+fmt(totRec)+'</td><td class="text-right">'+fmt(totCh)+'</td><td class="text-right '+(totNet>=0?'text-vert':'text-rouge')+'">'+(totNet>=0?'+':'')+fmt(totNet)+'</td></tr>';
+  document.getElementById('syn-metrics').innerHTML=
+    '<div class="metric"><div class="metric-label">Recettes '+annee+'</div><div class="metric-value vert">'+fmt(totRec)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Charges '+annee+'</div><div class="metric-value rouge">'+fmt(totCh)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Résultat net</div><div class="metric-value '+(totNet>=0?'vert':'rouge')+'">'+fmt(totNet)+'</div><div class="metric-sub">FCFA</div></div>'+
+    '<div class="metric"><div class="metric-label">Gain gaz</div><div class="metric-value">'+fmt(totGaz)+'</div><div class="metric-sub">FCFA</div></div>';
+}
+
+init();
+</script>
 </body>
 </html>

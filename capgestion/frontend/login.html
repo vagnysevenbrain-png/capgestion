@@ -66,7 +66,7 @@
         const data = await res.json();
 
         if (res.ok) {
-          window.location.href = '/app';
+          window.location.href = '/app.html';
         } else {
           errDiv.textContent   = data.erreur || 'Erreur de connexion.';
           errDiv.style.display = 'block';

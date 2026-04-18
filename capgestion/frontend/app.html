@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAPGestion</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+  <div style="padding:40px;text-align:center">
+    <h1 style="color:#1D9E75">CAPGestion</h1>
+    <p id="msg" style="margin-top:20px;font-size:16px">Chargement...</p>
+    <button onclick="deconnexion()" style="margin-top:30px;padding:10px 24px;background:#1D9E75;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer">
+      Se déconnecter
+    </button>
+  </div>
+  <script>
+    fetch('/api/auth/moi')
+      .then(r => r.json())
+      .then(d => {
+        if (!d.connecte) { window.location.href = '/login.html'; return; }
+        document.getElementById('msg').innerHTML =
+          'Connecté en tant que <strong>' + d.utilisateur.nom +
+          '</strong> (' + d.utilisateur.role + ')';
+      });
+
+    async function deconnexion() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+  </script>
+</body>
+</html>

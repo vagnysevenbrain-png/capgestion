@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CAPGestion — Connexion</title>
+  <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="login-page">
+
+  <div class="login-wrap">
+    <div class="login-logo">CAP<span>Gestion</span></div>
+    <div class="login-subtitle">Gestion Mobile Money & Gaz butane</div>
+
+    <div class="login-card">
+      <div id="login-erreur" class="alert alert-danger" style="display:none"></div>
+
+      <div class="form-group">
+        <label class="form-label">Adresse email</label>
+        <input type="email" id="email" class="form-input"
+               placeholder="votre@email.com" autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mot de passe</label>
+        <input type="password" id="password" class="form-input"
+               placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="login()" id="btn-login">
+        Se connecter
+      </button>
+    </div>
+
+    <div class="login-footer">CAPGestion v1.0 — Tous droits réservés</div>
+  </div>
+
+  <script>
+    // Si déjà connecté → rediriger
+    fetch('/api/auth/moi')
+      .then(r => r.json())
+      .then(d => { if (d.connecte) window.location.href = '/app'; });
+
+    async function login() {
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errDiv   = document.getElementById('login-erreur');
+      const btn      = document.getElementById('btn-login');
+
+      errDiv.style.display = 'none';
+      if (!email || !password) {
+        errDiv.textContent  = 'Veuillez remplir tous les champs.';
+        errDiv.style.display = 'block';
+        return;
+      }
+
+      btn.textContent = 'Connexion...';
+      btn.disabled    = true;
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ email, mot_de_passe: password })
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          window.location.href = '/app';
+        } else {
+          errDiv.textContent   = data.erreur || 'Erreur de connexion.';
+          errDiv.style.display = 'block';
+          btn.textContent      = 'Se connecter';
+          btn.disabled         = false;
+        }
+      } catch {
+        errDiv.textContent   = 'Impossible de contacter le serveur.';
+        errDiv.style.display = 'block';
+        btn.textContent      = 'Se connecter';
+        btn.disabled         = false;
+      }
+    }
+
+    // Connexion avec Entrée
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>

@@ -39,7 +39,7 @@
     // Si déjà connecté → rediriger
     fetch('/api/auth/moi')
       .then(r => r.json())
-      .then(d => { if (d.connecte) window.location.href = '/app'; });
+      .then(d => { if (d.connecte) window.location.href = '/app.html'; });
 
     async function login() {
       const email    = document.getElementById('email').value.trim();

@@ -357,7 +357,10 @@
 <script>
 var USER=null,FOND=null,GAZ=null,credits=[],rjDeps=[],rjDepTotal=0,rapportExistantId=null;
 
-function fmt(n){return Math.round(n||0).toLocaleString('fr-FR');}
+function fmt(n){
+  var num = Math.round(parseFloat(n)||0);
+  return num.toLocaleString('fr-FR');
+}
 function vn(id){return parseFloat(document.getElementById(id).value)||0;}
 function ini(n){var p=n.trim().split(' ');return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();}
 

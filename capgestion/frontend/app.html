@@ -639,7 +639,7 @@ async function chargerHistorique(){
   document.getElementById('hist-count').textContent=raps.length+' rapport(s)';
   if(!raps.length){list.innerHTML='<div style="color:var(--texte-sec);font-size:14px;padding:20px 0">Aucun rapport pour cette période.</div>';return;}
   list.innerHTML=raps.map(function(rap,i){
-    var tf=(rap.orange_rev||0)+(rap.orange_pdv||0)+(rap.unites||0)+(rap.wave||0)+(rap.mtn||0)+(rap.moov||0)+(rap.moov_p2||0)+(rap.tresor||0)+(rap.especes||0);
+    var tf=parseInt(rap.orange_rev||0)+parseInt(rap.orange_pdv||0)+parseInt(rap.unites||0)+parseInt(rap.wave||0)+parseInt(rap.mtn||0)+parseInt(rap.moov||0)+parseInt(rap.moov_p2||0)+parseInt(rap.tresor||0)+parseInt(rap.especes||0);
     var cg=(rap.b12_vendues||0)*450+(rap.b6_vendues||0)*350;
     var td=(rap.depenses||[]).reduce(function(a,x){return a+x.montant;},0);
     var net=cg-td;
@@ -653,10 +653,10 @@ async function chargerHistorique(){
       +'</div></div>'
       +'<div class="hist-body" id="hi-'+i+'">'
       +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">'
-      +'<div class="metric"><div class="metric-label">Orange total</div><div class="metric-value" style="font-size:16px">'+fmt((rap.orange_pdv||0)+(rap.orange_rev||0)+(rap.unites||0))+'</div></div>'
+      +'<div class="metric"><div class="metric-label">Orange total</div><div class="metric-value" style="font-size:16px">'+fmt(parseInt(rap.orange_pdv||0)+parseInt(rap.orange_rev||0)+parseInt(rap.unites||0))+'</div></div>'
       +'<div class="metric"><div class="metric-label">Wave</div><div class="metric-value" style="font-size:16px">'+fmt(rap.wave||0)+'</div></div>'
       +'<div class="metric"><div class="metric-label">MTN</div><div class="metric-value" style="font-size:16px">'+fmt(rap.mtn||0)+'</div></div>'
-      +'<div class="metric"><div class="metric-label">Moov P1+P2</div><div class="metric-value" style="font-size:16px">'+fmt((rap.moov||0)+(rap.moov_p2||0))+'</div></div>'
+      +'<div class="metric"><div class="metric-label">Moov P1+P2</div><div class="metric-value" style="font-size:16px">'+fmt(parseInt(rap.moov||0)+parseInt(rap.moov_p2||0))+'</div></div>'
       +'<div class="metric"><div class="metric-label">Trésor</div><div class="metric-value" style="font-size:16px">'+fmt(rap.tresor||0)+'</div></div>'
       +'<div class="metric"><div class="metric-label">Espèces</div><div class="metric-value" style="font-size:16px">'+fmt(rap.especes||0)+'</div></div>'
       +'</div>'

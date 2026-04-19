@@ -78,3 +78,40 @@ router.get('/employes', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+// GET /api/fond/mm/:mois — commissions d'un mois
+router.get('/mm/:mois', requireAuth, requireProprietaire, async (req, res) => {
+  const siteId = req.session.siteId;
+  const mois   = req.params.mois + '-01';
+  try {
+    const result = await db.query(
+      'SELECT * FROM mm_mensuel WHERE site_id=$1 AND mois=$2',
+      [siteId, mois]
+    );
+    res.json(result.rows[0]||null);
+  } catch(err) {
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  }
+});
+
+// POST /api/fond/mm/commissions — sauvegarder commissions
+router.post('/mm/commissions', requireAuth, requireProprietaire, async (req, res) => {
+  const siteId = req.session.siteId;
+  const { mois, orange_total, wave, mtn, moov, tresor, unites } = req.body;
+  if(!mois) return res.status(400).json({ erreur: 'Mois requis.' });
+  const moisDate = mois + '-01';
+  try {
+    await db.query(
+      `INSERT INTO mm_mensuel (site_id, mois, orange_total, wave, mtn, moov, tresor, unites)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       ON CONFLICT (site_id, mois) DO UPDATE SET
+         orange_total=EXCLUDED.orange_total, wave=EXCLUDED.wave,
+         mtn=EXCLUDED.mtn, moov=EXCLUDED.moov,
+         tresor=EXCLUDED.tresor, unites=EXCLUDED.unites`,
+      [siteId, moisDate, orange_total||0, wave||0, mtn||0, moov||0, tresor||0, unites||0]
+    );
+    res.json({ ok: true });
+  } catch(err) {
+    console.error('Erreur commissions:', err);
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  }
+});

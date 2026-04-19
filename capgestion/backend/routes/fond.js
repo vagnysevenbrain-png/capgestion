@@ -23,14 +23,14 @@ router.put('/mm', requireAuth, requireProprietaire, async (req, res) => {
   const { orange_pdv, orange_rev, wave, mtn, moov, moov_p2, tresor, unites, especes } = req.body;
   try {
     await db.query(
-      `UPDATE fond_mm SET
-         orange_pdv=$1, orange_rev=$2, orange_total=$1+$2,
-         wave=$3, mtn=$4, moov=$5, moov_p2=$6,
-         tresor=$7, unites=$8, especes=$9, mis_a_jour=NOW()
-       WHERE site_id=$10`,
-      [orange_pdv||0, orange_rev||0, wave||0, mtn||0,
-       moov||0, moov_p2||0, tresor||0, unites||0, especes||0, siteId]
-    );
+  `UPDATE fond_mm SET
+     orange_pdv=$1::bigint, orange_rev=$2::bigint, orange_total=$1::bigint+$2::bigint,
+     wave=$3::bigint, mtn=$4::bigint, moov=$5::bigint, moov_p2=$6::bigint,
+     tresor=$7::bigint, unites=$8::bigint, especes=$9::bigint, mis_a_jour=NOW()
+   WHERE site_id=$10`,
+  [orange_pdv||0, orange_rev||0, wave||0, mtn||0,
+   moov||0, moov_p2||0, tresor||0, unites||0, especes||0, siteId]
+);
     res.json({ ok: true });
   } catch (err) {
     console.error('Erreur MAJ fond:', err);
@@ -43,14 +43,14 @@ router.put('/gaz', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
   const { b12_pleines, b12_vides, b6_pleines, b6_vides } = req.body;
   try {
-    await db.query(
-      `UPDATE gaz_config SET
-         b12_pleines=$1, b12_vides=$2, b12_stock=$1+$2,
-         b6_pleines=$3,  b6_vides=$4,  b6_stock=$3+$4,
-         mis_a_jour=NOW()
-       WHERE site_id=$5`,
-      [b12_pleines||0, b12_vides||0, b6_pleines||0, b6_vides||0, siteId]
-    );
+ await db.query(
+  `UPDATE gaz_config SET
+     b12_pleines=$1::int, b12_vides=$2::int, b12_stock=$1::int+$2::int,
+     b6_pleines=$3::int,  b6_vides=$4::int,  b6_stock=$3::int+$4::int,
+     mis_a_jour=NOW()
+   WHERE site_id=$5`,
+  [b12_pleines||0, b12_vides||0, b6_pleines||0, b6_vides||0, siteId]
+);
     res.json({ ok: true });
   } catch (err) {
     console.error('Erreur MAJ gaz:', err);

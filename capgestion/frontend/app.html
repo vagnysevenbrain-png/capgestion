@@ -422,7 +422,7 @@ async function chargerDashboard(){
   });
   var soldeMM=0;
   if(FOND){
-    soldeMM=(FOND.orange_pdv||0)+(FOND.orange_rev||0)+(FOND.wave||0)+(FOND.mtn||0)+(FOND.moov||0)+(FOND.moov_p2||0)+(FOND.tresor||0)+(FOND.unites||0)+(FOND.especes||0);
+    soldeMM=parseInt(FOND.orange_pdv||0)+parseInt(FOND.orange_rev||0)+parseInt(FOND.wave||0)+parseInt(FOND.mtn||0)+parseInt(FOND.moov||0)+parseInt(FOND.moov_p2||0)+parseInt(FOND.tresor||0)+parseInt(FOND.unites||0)+parseInt(FOND.especes||0);;
   }
   document.getElementById('dash-metrics').innerHTML=
     '<div class="metric"><div class="metric-label">Fond Mobile Money</div><div class="metric-value vert">'+fmt(soldeMM)+'</div><div class="metric-sub">FCFA disponibles</div></div>'+
@@ -762,8 +762,7 @@ async function mmSaveFond(){
 }
 
 function chargerMMFondActuel(){
-  if(!FOND)return;
-  var total=(FOND.orange_pdv||0)+(FOND.orange_rev||0)+(FOND.wave||0)+(FOND.mtn||0)+(FOND.moov||0)+(FOND.moov_p2||0)+(FOND.tresor||0)+(FOND.unites||0)+(FOND.especes||0);
+  if(!FOND)return;var total=parseInt(FOND.orange_pdv||0)+parseInt(FOND.orange_rev||0)+parseInt(FOND.wave||0)+parseInt(FOND.mtn||0)+parseInt(FOND.moov||0)+parseInt(FOND.moov_p2||0)+parseInt(FOND.tresor||0)+parseInt(FOND.unites||0)+parseInt(FOND.especes||0);;
   document.getElementById('mm-fond-actuel').innerHTML=
     '<div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--texte)">Fond actuel</div>'+
     '<div class="sum-line"><span>Orange PDV</span><span>'+fmt(FOND.orange_pdv)+'</span></div>'+

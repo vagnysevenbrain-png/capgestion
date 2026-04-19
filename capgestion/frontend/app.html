@@ -420,15 +420,39 @@ async function chargerDashboard(){
     totalGaz+=(rap.b12_vendues||0)*450+(rap.b6_vendues||0)*350;
     (rap.depenses||[]).forEach(function(d){totalDep+=d.montant;});
   });
-  var soldeMM=0;
+
+  // Fond de base
+  var fondBase=0,soldeActuel=0;
   if(FOND){
-    soldeMM=parseInt(FOND.orange_pdv||0)+parseInt(FOND.orange_rev||0)+parseInt(FOND.wave||0)+parseInt(FOND.mtn||0)+parseInt(FOND.moov||0)+parseInt(FOND.moov_p2||0)+parseInt(FOND.tresor||0)+parseInt(FOND.unites||0)+parseInt(FOND.especes||0);;
+    fondBase=parseInt(FOND.orange_pdv||0)+parseInt(FOND.orange_rev||0)+parseInt(FOND.wave||0)+parseInt(FOND.mtn||0)+parseInt(FOND.moov||0)+parseInt(FOND.moov_p2||0)+parseInt(FOND.tresor||0)+parseInt(FOND.unites||0)+parseInt(FOND.especes||0);
+    soldeActuel=fondBase;
   }
+
+  // Crédits MM en cours
+  var rc=await api('/api/credits');
+  var creds=rc.ok?rc.data:[];
+  var actifs=creds.filter(function(c){return c.statut==='en_cours';});
+  var totalDu=actifs.reduce(function(a,c){return a+(c.montant-c.rembourse);},0);
+
+  // Crédits MM uniquement (opérateur mobile money)
+  var creditsMM=actifs.filter(function(c){
+    var op=(c.operateur||'').toLowerCase();
+    return op.includes('orange')||op.includes('wave')||op.includes('mtn')||op.includes('moov')||op.includes('trésor')||op.includes('tresor');
+  });
+  var totalCreditsMM=creditsMM.reduce(function(a,c){return a+(c.montant-c.rembourse);},0);
+
+  // Indicateur : fond de base - (solde actuel + crédits MM)
+  var indicateur=fondBase-(soldeActuel+totalCreditsMM);
+  var indicateurLabel=indicateur>=0?'Excédent':'Perte';
+  var indicateurColor=indicateur>=0?'var(--vert-fonce)':'var(--rouge)';
+  var indicateurSign=indicateur>=0?'+':'';
+
   document.getElementById('dash-metrics').innerHTML=
-    '<div class="metric"><div class="metric-label">Fond Mobile Money</div><div class="metric-value vert">'+fmt(soldeMM)+'</div><div class="metric-sub">FCFA disponibles</div></div>'+
+    '<div class="metric"><div class="metric-label">Fond Mobile Money</div><div class="metric-value vert">'+fmt(soldeActuel)+'</div><div class="metric-sub">FCFA disponibles</div></div>'+
+    '<div class="metric"><div class="metric-label">'+indicateurLabel+' MM</div><div class="metric-value" style="color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+'</div><div class="metric-sub">Fond − (Solde + Crédits MM)</div></div>'+
     '<div class="metric"><div class="metric-label">Commission gaz (mois)</div><div class="metric-value">'+fmt(totalGaz)+'</div><div class="metric-sub">FCFA</div></div>'+
-    '<div class="metric"><div class="metric-label">Dépenses (mois)</div><div class="metric-value rouge">'+fmt(totalDep)+'</div><div class="metric-sub">FCFA</div></div>'+
-    '<div class="metric"><div class="metric-label">Rapports ce mois</div><div class="metric-value">'+raps.length+'</div><div class="metric-sub">rapports envoyés</div></div>';
+    '<div class="metric"><div class="metric-label">Crédits en cours</div><div class="metric-value rouge">'+fmt(totalDu)+'</div><div class="metric-sub">FCFA dus</div></div>';
+
   if(FOND){
     document.getElementById('dash-mm').innerHTML=
       '<div class="sum-line"><span>Orange PDV</span><span style="font-weight:600">'+fmt(FOND.orange_pdv)+'</span></div>'+
@@ -440,8 +464,15 @@ async function chargerDashboard(){
       '<div class="sum-line"><span>Trésor</span><span style="font-weight:600">'+fmt(FOND.tresor)+'</span></div>'+
       '<div class="sum-line"><span>Unités</span><span style="font-weight:600">'+fmt(FOND.unites)+'</span></div>'+
       '<div class="sum-line"><span>Espèces</span><span style="font-weight:600">'+fmt(FOND.especes)+'</span></div>'+
-      '<div class="sum-line"><span style="font-weight:600">TOTAL</span><span style="font-weight:700;color:var(--vert-fonce)">'+fmt(soldeMM)+'</span></div>';
+      '<hr class="sep">'+
+      '<div class="sum-line"><span style="font-weight:600">Total fond</span><span style="font-weight:700;color:var(--vert-fonce)">'+fmt(soldeActuel)+'</span></div>'+
+      '<div class="sum-line"><span>Crédits MM en cours</span><span class="text-rouge">−'+fmt(totalCreditsMM)+'</span></div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:8px 10px;border-radius:var(--radius);background:'+(indicateur>=0?'#E1F5EE':'#FCEBEB')+';border:1px solid '+(indicateur>=0?'#9FE1CB':'#E24B4A')+'">'
+      +'<span style="font-size:13px;font-weight:600;color:'+(indicateur>=0?'var(--vert-fonce)':'var(--rouge)')+'">'+indicateurLabel+'</span>'
+      +'<span style="font-size:16px;font-weight:700;color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+' FCFA</span>'
+      +'</div>';
   }
+
   if(GAZ){
     document.getElementById('dash-gaz').innerHTML=
       '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bordure)">'+
@@ -453,14 +484,14 @@ async function chargerDashboard(){
       '<div style="text-align:right"><div style="font-size:11px;color:var(--texte-sec)">pleines / vides</div>'+
       '<div style="font-size:18px;font-weight:700;color:var(--vert-fonce)">'+GAZ.b6_pleines+' / '+GAZ.b6_vides+'</div></div></div>';
   }
-  var rc=await api('/api/credits');
-  var creds=rc.ok?rc.data:[];
-  var actifs=creds.filter(function(c){return c.statut==='en_cours';});
-  var totalDu=actifs.reduce(function(a,c){return a+(c.montant-c.rembourse);},0);
+
   var alerts='';
+  if(indicateur<0)alerts+='<div class="alert alert-danger">Perte Mobile Money : '+fmt(Math.abs(indicateur))+' FCFA</div>';
   if(totalDu>0)alerts+='<div class="alert alert-warning">'+actifs.length+' crédit(s) en cours — '+fmt(totalDu)+' FCFA dus</div>';
   alerts+='<div class="alert alert-info" style="font-size:13px">Rapport du jour : pensez à le saisir avant minuit</div>';
   document.getElementById('dash-alerts').innerHTML=alerts;
+}
+  
 }
 
 async function checkRapportExistant(){

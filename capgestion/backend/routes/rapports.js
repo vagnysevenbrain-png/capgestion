@@ -3,7 +3,6 @@ const db      = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const router  = express.Router();
 
-// POST /api/rapports — créer rapport du jour
 router.post('/', requireAuth, async (req, res) => {
   const siteId   = req.session.siteId;
   const gerantId = req.session.userId;
@@ -42,19 +41,18 @@ router.post('/', requireAuth, async (req, res) => {
       for (const dep of depenses) {
         await client.query(
           'INSERT INTO rapport_depenses (rapport_id, description, montant) VALUES ($1,$2,$3)',
-          [rapportId, dep.description, dep.montant]
+          [dep.description, dep.montant].unshift(rapportId) || [rapportId, dep.description, dep.montant]
         );
       }
     }
-    // Mettre à jour stock gaz
     await client.query(
       `UPDATE gaz_config SET
-         b12_pleines = b12_pleines + $1 - $2,
-         b12_vides   = b12_vides   - $1 + $2,
-         b6_pleines  = b6_pleines  + $3 - $4,
-         b6_vides    = b6_vides    - $3 + $4,
-         b12_stock   = b12_stock   + $1 - $2 - $5,
-         b6_stock    = b6_stock    + $3 - $4 - $6,
+         b12_pleines = b12_pleines + $1::int - $2::int,
+         b12_vides   = b12_vides   - $1::int + $2::int,
+         b6_pleines  = b6_pleines  + $3::int - $4::int,
+         b6_vides    = b6_vides    - $3::int + $4::int,
+         b12_stock   = b12_stock   + $1::int - $2::int - $5::int,
+         b6_stock    = b6_stock    + $3::int - $4::int - $6::int,
          mis_a_jour  = NOW()
        WHERE site_id = $7`,
       [gaz.b12r||0, gaz.b12v||0, gaz.b6r||0, gaz.b6v||0,
@@ -74,7 +72,6 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/rapports — liste des rapports
 router.get('/', requireAuth, async (req, res) => {
   const siteId = req.session.siteId;
   const { mois, limit = 31 } = req.query;
@@ -114,7 +111,6 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/rapports/:id — détail d'un rapport
 router.get('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
   const siteId  = req.session.siteId;
@@ -147,7 +143,6 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// PUT /api/rapports/:id — modifier rapport du jour uniquement
 router.put('/:id', requireAuth, async (req, res) => {
   const { id }  = req.params;
   const siteId  = req.session.siteId;
@@ -160,21 +155,17 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (check.rows.length === 0) {
       return res.status(404).json({ erreur: 'Rapport introuvable.' });
     }
-    const rap     = check.rows[0];
-   const today   = new Date();
-const rapDate = new Date(rap.date_rapport);
-const diffJours = Math.floor((today - rapDate) / (1000 * 60 * 60 * 24));
-
-// Gérant : seulement aujourd'hui
-// Propriétaire : 7 derniers jours
-const limiteJours = req.session.role === 'proprietaire' ? 7 : 0;
-if (diffJours > limiteJours) {
-  return res.status(403).json({
-    erreur: req.session.role === 'proprietaire'
-      ? 'Modification impossible au-delà de 7 jours.'
-      : 'Seul le rapport du jour peut être modifié.'
-  });
-}
+    const rap       = check.rows[0];
+    const today     = new Date();
+    const rapDate   = new Date(rap.date_rapport);
+    const diffJours = Math.floor((today - rapDate) / (1000 * 60 * 60 * 24));
+    const limite    = req.session.role === 'proprietaire' ? 7 : 0;
+    if (diffJours > limite) {
+      return res.status(403).json({
+        erreur: req.session.role === 'proprietaire'
+          ? 'Modification impossible au-delà de 7 jours.'
+          : 'Seul le rapport du jour peut être modifié.'
+      });
     }
     await client.query('BEGIN');
     await client.query(

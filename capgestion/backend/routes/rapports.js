@@ -161,10 +161,20 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ erreur: 'Rapport introuvable.' });
     }
     const rap     = check.rows[0];
-    const today   = new Date().toISOString().split('T')[0];
-    const rapDate = new Date(rap.date_rapport).toISOString().split('T')[0];
-    if (rapDate !== today) {
-      return res.status(403).json({ erreur: 'Seul le rapport du jour peut être modifié.' });
+   const today   = new Date();
+const rapDate = new Date(rap.date_rapport);
+const diffJours = Math.floor((today - rapDate) / (1000 * 60 * 60 * 24));
+
+// Gérant : seulement aujourd'hui
+// Propriétaire : 7 derniers jours
+const limiteJours = req.session.role === 'proprietaire' ? 7 : 0;
+if (diffJours > limiteJours) {
+  return res.status(403).json({
+    erreur: req.session.role === 'proprietaire'
+      ? 'Modification impossible au-delà de 7 jours.'
+      : 'Seul le rapport du jour peut être modifié.'
+  });
+}
     }
     await client.query('BEGIN');
     await client.query(

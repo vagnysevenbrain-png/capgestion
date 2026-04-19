@@ -74,6 +74,64 @@ router.get('/synthese/annuelle', requireAuth, requireProprietaire, async (req, r
     const result = await db.query(
       `SELECT
          to_char(m.mois, 'YYYY-MM') AS mois,
+         COALESCE((
+           SELECT SUM(
+             COALESCE(g.b12_vendues,0) * gc.b12_commission +
+             COALESCE(g.b6_vendues,0)  * gc.b6_commission
+           )
+           FROM rapport_gaz g
+           JOIN rapports r ON g.rapport_id = r.id
+           CROSS JOIN gaz_config gc
+           WHERE r.site_id = $1
+             AND gc.site_id = $1
+             AND to_char(r.date_rapport,'YYYY-MM') = to_char(m.mois,'YYYY-MM')
+         ), 0) AS gain_gaz,
+         COALESCE((
+           SELECT SUM(
+             COALESCE(s.orange_pdv,0) + COALESCE(s.orange_rev,0) +
+             COALESCE(s.unites,0) + COALESCE(s.wave,0) +
+             COALESCE(s.mtn,0) + COALESCE(s.moov,0) +
+             COALESCE(s.moov_p2,0) + COALESCE(s.tresor,0) +
+             COALESCE(s.especes,0)
+           )
+           FROM rapport_soldes s
+           JOIN rapports r ON s.rapport_id = r.id
+           WHERE r.site_id = $1
+             AND to_char(r.date_rapport,'YYYY-MM') = to_char(m.mois,'YYYY-MM')
+         ), 0) AS gain_mm,
+         COALESCE((
+           SELECT
+             COALESCE(c.salaires,0) + COALESCE(c.loyer_local,0) +
+             COALESCE(c.loyer_terrain,0) + COALESCE(c.telephone_internet,0) +
+             COALESCE(c.transport_gerante,0) + COALESCE(c.mairie,0) +
+             COALESCE(c.impots,0) + COALESCE(c.cnps,0) +
+             COALESCE(c.photocopie,0) + COALESCE(c.tontine,0) +
+             COALESCE(c.sodeci_cie,0) + COALESCE(c.aide_magasin,0) +
+             COALESCE(c.bonus,0) + COALESCE(c.autres_variables,0)
+           FROM charges c
+           WHERE c.site_id = $1
+             AND c.mois = m.mois
+         ), 0) AS total_charges
+       FROM generate_series(
+         ($2::text || '-01-01')::date,
+         ($2::text || '-12-01')::date,
+         '1 month'::interval
+       ) AS m(mois)
+       ORDER BY m.mois`,
+      [siteId, annee]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Erreur synthèse:', err);
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  }
+});
+  const siteId = req.session.siteId;
+  const annee  = req.query.annee || new Date().getFullYear();
+  try {
+    const result = await db.query(
+      `SELECT
+         to_char(m.mois, 'YYYY-MM') AS mois,
          COALESCE(mm.orange_total + mm.wave + mm.mtn + mm.moov + mm.tresor + mm.unites, 0) AS gain_mm,
          COALESCE(
            (SELECT SUM(g.b12_vendues * gc.b12_commission + g.b6_vendues * gc.b6_commission)

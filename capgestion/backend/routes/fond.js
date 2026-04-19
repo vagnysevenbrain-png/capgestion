@@ -109,5 +109,52 @@ router.get('/employes', requireAuth, async (req, res) => {
     res.status(500).json({ erreur: 'Erreur serveur.' });
   }
 });
+// POST /api/fond/employes — ajouter un employé
+router.post('/employes', requireAuth, requireProprietaire, async (req, res) => {
+  const siteId = req.session.siteId;
+  const { nom, poste, salaire_base, email, mot_de_passe } = req.body;
+  if (!nom) return res.status(400).json({ erreur: 'Nom requis.' });
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Créer l'employé
+    await client.query(
+      'INSERT INTO employes (site_id, nom, poste, salaire_base) VALUES ($1,$2,$3,$4)',
+      [siteId, nom, poste||'', salaire_base||0]
+    );
+    // Créer le compte si email fourni
+    if (email && mot_de_passe) {
+      await client.query(
+        `INSERT INTO utilisateurs (site_id, nom, email, mot_de_passe, role)
+         VALUES ($1,$2,$3,$4,'gerant')
+         ON CONFLICT (email) DO NOTHING`,
+        [siteId, nom, email.toLowerCase(), mot_de_passe]
+      );
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Erreur ajout employé:', err);
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  } finally {
+    client.release();
+  }
+});
 
+// DELETE /api/fond/employes/:id — désactiver un employé
+router.delete('/employes/:id', requireAuth, requireProprietaire, async (req, res) => {
+  const { id } = req.params;
+  const siteId  = req.session.siteId;
+  try {
+    await db.query(
+      'UPDATE employes SET actif=FALSE WHERE id=$1 AND site_id=$2',
+      [id, siteId]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur suppression employé:', err);
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  }
+});
 module.exports = router;

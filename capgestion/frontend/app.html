@@ -253,7 +253,11 @@
 <!-- MOBILE MONEY -->
 <div class="section" id="mobilemoney">
   <div class="owner-banner">Rubrique visible uniquement par le propriétaire</div>
-  <div style="font-size:16px;font-weight:600;color:var(--texte);margin-bottom:14px">Mobile Money — Fond &amp; Commissions</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+  <div style="font-size:16px;font-weight:600;color:var(--texte)">Mobile Money — Fond &amp; Commissions</div>
+  <select id="mm-mois" style="max-width:200px"></select>
+  <button class="btn btn-sm" onclick="mmCharger()">Charger</button>
+</div>
   <div class="grid-2">
     <div class="card">
       <div class="card-title">Fond de base — mise à jour</div>

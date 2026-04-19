@@ -430,10 +430,14 @@ async function chargerDashboard(){
     (rap.depenses||[]).forEach(function(d){totalDep+=pi(d.montant);});
   });
   var fondBase=0,soldeActuel=0;
-  if(FOND){
-    fondBase=pi(FOND.fond_base_reference||0);
-    soldeActuel=pi(FOND.orange_pdv)+pi(FOND.orange_rev)+pi(FOND.wave)+pi(FOND.mtn)+pi(FOND.moov)+pi(FOND.moov_p2)+pi(FOND.tresor)+pi(FOND.unites)+pi(FOND.especes);
-  }
+if(FOND){
+  fondBase=pi(FOND.fond_base_reference||0);
+}
+// Solde = dernier rapport journalier envoyé
+if(raps.length>0){
+  var dernierRap=raps[0];
+  soldeActuel=pi(dernierRap.orange_pdv)+pi(dernierRap.orange_rev)+pi(dernierRap.unites)+pi(dernierRap.wave)+pi(dernierRap.mtn)+pi(dernierRap.moov)+pi(dernierRap.moov_p2)+pi(dernierRap.tresor)+pi(dernierRap.especes);
+}
   var rc=await api('/api/credits');
   var creds=rc.ok?rc.data:[];
   var actifs=creds.filter(function(c){return c.statut==='en_cours';});
@@ -454,24 +458,29 @@ async function chargerDashboard(){
     '<div class="metric"><div class="metric-label">Commission gaz (mois)</div><div class="metric-value">'+fmt(totalGaz)+'</div><div class="metric-sub">FCFA</div></div>'+
     '<div class="metric"><div class="metric-label">Crédits en cours</div><div class="metric-value rouge">'+fmt(totalDu)+'</div><div class="metric-sub">FCFA dus</div></div>';
 
-  if(FOND){
-    document.getElementById('dash-mm').innerHTML=
-      '<div class="sum-line"><span>Orange PDV</span><span style="font-weight:600">'+fmt(FOND.orange_pdv)+'</span></div>'+
-      '<div class="sum-line"><span>Orange Rev</span><span style="font-weight:600">'+fmt(FOND.orange_rev)+'</span></div>'+
-      '<div class="sum-line"><span>Wave</span><span style="font-weight:600">'+fmt(FOND.wave)+'</span></div>'+
-      '<div class="sum-line"><span>MTN</span><span style="font-weight:600">'+fmt(FOND.mtn)+'</span></div>'+
-      '<div class="sum-line"><span>Moov P1</span><span style="font-weight:600">'+fmt(FOND.moov)+'</span></div>'+
-      '<div class="sum-line"><span>Moov P2</span><span style="font-weight:600">'+fmt(FOND.moov_p2)+'</span></div>'+
-      '<div class="sum-line"><span>Trésor</span><span style="font-weight:600">'+fmt(FOND.tresor)+'</span></div>'+
-      '<div class="sum-line"><span>Unités</span><span style="font-weight:600">'+fmt(FOND.unites)+'</span></div>'+
-      '<div class="sum-line"><span>Espèces</span><span style="font-weight:600">'+fmt(FOND.especes)+'</span></div>'+
-      '<hr class="sep">'+
-      '<div class="sum-line"><span style="font-weight:600">Total solde</span><span style="font-weight:700;color:var(--vert-fonce)">'+fmt(soldeActuel)+'</span></div>'+
-      '<div class="sum-line"><span>Crédits MM</span><span class="text-rouge">−'+fmt(totalCreditsMM)+'</span></div>'+
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:8px 10px;border-radius:var(--radius);background:'+(indicateur>=0?'#E1F5EE':'#FCEBEB')+';border:1px solid '+(indicateur>=0?'#9FE1CB':'#E24B4A')+'">'+
-      '<span style="font-size:13px;font-weight:600;color:'+(indicateur>=0?'var(--vert-fonce)':'var(--rouge)')+'">'+indicateurLabel+'</span>'+
-      '<span style="font-size:16px;font-weight:700;color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+' FCFA</span></div>';
-  }
+  if(raps.length>0){
+  var dr=raps[0];
+  var dateRapStr=new Date(dr.date_rapport).toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'});
+  document.getElementById('dash-mm').innerHTML=
+    '<div style="font-size:12px;color:var(--texte-sec);margin-bottom:8px">Dernier rapport : <strong>'+dateRapStr+'</strong> — '+dr.gerant_nom+'</div>'+
+    '<div class="sum-line"><span>Orange PDV</span><span style="font-weight:600">'+fmt(dr.orange_pdv)+'</span></div>'+
+    '<div class="sum-line"><span>Orange Rev</span><span style="font-weight:600">'+fmt(dr.orange_rev)+'</span></div>'+
+    '<div class="sum-line"><span>Orange Unités</span><span style="font-weight:600">'+fmt(dr.unites)+'</span></div>'+
+    '<div class="sum-line"><span>Wave</span><span style="font-weight:600">'+fmt(dr.wave)+'</span></div>'+
+    '<div class="sum-line"><span>MTN</span><span style="font-weight:600">'+fmt(dr.mtn)+'</span></div>'+
+    '<div class="sum-line"><span>Moov P1</span><span style="font-weight:600">'+fmt(dr.moov)+'</span></div>'+
+    '<div class="sum-line"><span>Moov P2</span><span style="font-weight:600">'+fmt(dr.moov_p2)+'</span></div>'+
+    '<div class="sum-line"><span>Trésor</span><span style="font-weight:600">'+fmt(dr.tresor)+'</span></div>'+
+    '<div class="sum-line"><span>Espèces</span><span style="font-weight:600">'+fmt(dr.especes)+'</span></div>'+
+    '<hr class="sep">'+
+    '<div class="sum-line"><span style="font-weight:600">Total solde</span><span style="font-weight:700;color:var(--vert-fonce)">'+fmt(soldeActuel)+'</span></div>'+
+    '<div class="sum-line"><span>Crédits MM</span><span class="text-rouge">−'+fmt(totalCreditsMM)+'</span></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding:8px 10px;border-radius:var(--radius);background:'+(indicateur>=0?'#E1F5EE':'#FCEBEB')+';border:1px solid '+(indicateur>=0?'#9FE1CB':'#E24B4A')+'">'+
+    '<span style="font-size:13px;font-weight:600;color:'+(indicateur>=0?'var(--vert-fonce)':'var(--rouge)')+'">'+indicateurLabel+'</span>'+
+    '<span style="font-size:16px;font-weight:700;color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+' FCFA</span></div>';
+}else{
+  document.getElementById('dash-mm').innerHTML='<div style="color:var(--texte-sec);font-size:14px">Aucun rapport envoyé ce mois.</div>';
+}
   if(GAZ){
     document.getElementById('dash-gaz').innerHTML=
       '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bordure)">'+

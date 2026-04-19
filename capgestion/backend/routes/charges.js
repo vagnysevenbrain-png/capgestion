@@ -68,17 +68,22 @@ router.get('/synthese/annuelle', requireAuth, requireProprietaire, async (req, r
       `SELECT
          to_char(m.mois, 'YYYY-MM') AS mois,
          COALESCE((
-           SELECT SUM(
-             COALESCE(g.b12_vendues,0) * gc.b12_commission +
-             COALESCE(g.b6_vendues,0)  * gc.b6_commission
-           )
-           FROM rapport_gaz g
-           JOIN rapports r ON g.rapport_id = r.id
-           CROSS JOIN gaz_config gc
-           WHERE r.site_id = $1
-             AND gc.site_id = $1
-             AND to_char(r.date_rapport,'YYYY-MM') = to_char(m.mois,'YYYY-MM')
-         ), 0) AS gain_gaz,
+  SELECT mm.gain_gaz
+  FROM mm_mensuel mm
+  WHERE mm.site_id = $1
+    AND mm.mois = m.mois
+), COALESCE((
+  SELECT SUM(
+    COALESCE(g.b12_vendues,0) * gc.b12_commission +
+    COALESCE(g.b6_vendues,0)  * gc.b6_commission
+  )
+  FROM rapport_gaz g
+  JOIN rapports r ON g.rapport_id = r.id
+  CROSS JOIN gaz_config gc
+  WHERE r.site_id = $1
+    AND gc.site_id = $1
+    AND to_char(r.date_rapport,'YYYY-MM') = to_char(m.mois,'YYYY-MM')
+), 0)) AS gain_gaz,
         COALESCE((
   SELECT
     COALESCE(mm.orange_total,0) + COALESCE(mm.wave,0) +

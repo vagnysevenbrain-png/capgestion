@@ -8,16 +8,17 @@ const authRoutes    = require('./routes/auth');
 const rapportRoutes = require('./routes/rapports');
 const creditRoutes  = require('./routes/credits');
 const chargeRoutes  = require('./routes/charges');
+const fondRoutes    = require('./routes/fond');
 const { attachUser } = require('./middleware/auth');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// Middlewares
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
-app.set('trust proxy', 1);
+
 app.use(session({
   secret:            process.env.SESSION_SECRET || 'dev_secret_changez_moi',
   resave:            false,
@@ -32,22 +33,18 @@ app.use(session({
 }));
 
 app.use(attachUser);
-
-// Servir le frontend (fichiers statiques)
 app.use(express.static(path.join(__dirname, '../frontend')));
 
-// Routes API
-app.use('/api/auth',    authRoutes);
+app.use('/api/auth',     authRoutes);
 app.use('/api/rapports', rapportRoutes);
 app.use('/api/credits',  creditRoutes);
 app.use('/api/charges',  chargeRoutes);
+app.use('/api/fond',     fondRoutes);
 
-// Toutes les autres routes → page principale (SPA)
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Démarrage
 app.listen(PORT, () => {
   console.log(`CAPGestion démarré sur le port ${PORT}`);
 });

@@ -425,6 +425,7 @@ async function chargerDashboard(){
   var fondBase=0,soldeActuel=0;
   if(FOND){
    var fondBase=parseInt(FOND.fond_base_reference||0);
+var soldeActuel=parseInt(FOND.orange_pdv||0)+parseInt(FOND.orange_rev||0)+parseInt(FOND.wave||0)+parseInt(FOND.mtn||0)+parseInt(FOND.moov||0)+parseInt(FOND.moov_p2||0)+parseInt(FOND.tresor||0)+parseInt(FOND.unites||0)+parseInt(FOND.especes||0);
   }
 
   // Crédits MM en cours

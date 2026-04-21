@@ -447,14 +447,14 @@ if(raps.length>0){
     return op.includes('orange')||op.includes('wave')||op.includes('mtn')||op.includes('moov')||op.includes('trésor')||op.includes('tresor');
   });
   var totalCreditsMM=creditsMM.reduce(function(a,c){return a+(pi(c.montant)-pi(c.rembourse));},0);
-  var indicateur=fondBase-(soldeActuel+totalCreditsMM);
-  var indicateurColor=indicateur>=0?'var(--vert-fonce)':'var(--rouge)';
-  var indicateurSign=indicateur>=0?'+':'';
-  var indicateurLabel=indicateur>=0?'Excédent':'Perte';
+  var indicateur=(soldeActuel+totalCreditsMM)-fondBase;
+var indicateurColor=indicateur>=0?'var(--vert-fonce)':'var(--rouge)';
+var indicateurSign=indicateur>=0?'+':'';
+var indicateurLabel=indicateur>=0?'Excès de trésorerie':'Perte';
 
   document.getElementById('dash-metrics').innerHTML=
     '<div class="metric"><div class="metric-label">Fond Mobile Money</div><div class="metric-value vert">'+fmt(soldeActuel)+'</div><div class="metric-sub">FCFA disponibles</div></div>'+
-    '<div class="metric"><div class="metric-label">'+indicateurLabel+' MM</div><div class="metric-value" style="color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+'</div><div class="metric-sub">Fond − (Solde + Crédits MM)</div></div>'+
+    '<div class="metric"><div class="metric-label">'+indicateurLabel+' MM</div><div class="metric-value" style="color:'+indicateurColor+'">'+indicateurSign+fmt(indicateur)+'</div><div class="metric-sub">(Solde + Crédits) − Fond</div></div>'+
     '<div class="metric"><div class="metric-label">Commission gaz (mois)</div><div class="metric-value">'+fmt(totalGaz)+'</div><div class="metric-sub">FCFA</div></div>'+
     '<div class="metric"><div class="metric-label">Crédits en cours</div><div class="metric-value rouge">'+fmt(totalDu)+'</div><div class="metric-sub">FCFA dus</div></div>';
 
@@ -494,6 +494,7 @@ if(raps.length>0){
   }
   var alerts='';
   if(indicateur<0)alerts+='<div class="alert alert-danger">Perte Mobile Money : '+fmt(Math.abs(indicateur))+' FCFA</div>';
+else if(indicateur>0)alerts+='<div class="alert alert-success" style="background:#E1F5EE;border:0.5px solid #9FE1CB;color:#0F6E56;border-radius:var(--radius);padding:9px 12px;margin-bottom:10px;font-size:13px">Excès de trésorerie : +'+fmt(indicateur)+' FCFA</div>';
   if(totalDu>0)alerts+='<div class="alert alert-warning">'+actifs.length+' crédit(s) en cours — '+fmt(totalDu)+' FCFA dus</div>';
   alerts+='<div class="alert alert-info" style="font-size:13px">Rapport du jour : pensez à le saisir avant minuit</div>';
   document.getElementById('dash-alerts').innerHTML=alerts;
@@ -820,7 +821,7 @@ function renderCrListe(){
       +'<div style="font-size:13px;color:var(--texte-sec);margin-bottom:10px">Échéance : '+(c.echeance?new Date(c.echeance).toLocaleDateString('fr-FR'):'—')+' · Depuis le '+new Date(c.created_at).toLocaleDateString('fr-FR')+'</div>'
       +(c.observation?'<div style="font-size:13px;color:var(--texte-sec);background:var(--bg);border-radius:var(--radius);padding:8px 10px;margin-bottom:10px;border:1px solid var(--bordure)">'+c.observation+'</div>':'')
       +'<div style="font-size:12px;font-weight:600;color:var(--texte-sec);text-transform:uppercase;margin-bottom:8px">Mouvements</div>'+mvHtml
-      +(r>0?'<button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="goRembClient('+c.id+')">Enregistrer un remboursement</button>':'')
+      +(r>0?'<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-primary btn-sm" onclick="goRembClient('+c.id+')">Enregistrer un remboursement</button><button class="btn btn-sm" onclick="goAugmentClient('+c.id+')">Augmenter le crédit</button></div>':'')
       +'</div></div>';
   }).join('');
 }
@@ -1009,6 +1010,18 @@ async function empSupprimer(id,nom){
   var r=await api('/api/fond/employes/'+id,'DELETE');
   if(r.ok){toast(nom+' désactivé.');chargerParametres();}
   else toast(r.data.erreur||'Erreur.','err');
+}
+function goAugmentClient(id){
+  goSec('credits',null);
+  crTab('cr-new',document.querySelectorAll('#credits .tab')[1]);
+  // Pré-remplir le nom du client
+  var c=credits.find(function(x){return x.id===id;});
+  if(c){
+    document.getElementById('cn_nom').value=c.nom;
+    document.getElementById('cn_tel').value=c.telephone||'';
+    document.getElementById('cn_op').value=c.operateur||'';
+    document.getElementById('cn_obs').value='Augmentation du crédit existant';
+  }
 }
 function goSec(id,el){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});

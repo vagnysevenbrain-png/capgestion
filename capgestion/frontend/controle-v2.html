@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contrôle V2</title>
+    <link rel="stylesheet" href="/css/main.css" />
+</head>
+
+<body>
+    <div class="page-content">
+        <div class="card">
+            <div class="card-title">Contrôle V2</div>
+            <p id="etat">Chargement...</p>
+            <button class="btn btn-primary" onclick="testerSession()">Tester la session</button>
+            <button class="btn" onclick="testerDashboard()">Tester le dashboard</button>
+            <pre id="sortie"
+                style="margin-top:12px; background:#111827; color:#fff; padding:12px; border-radius:8px; white-space:pre-wrap;"></pre>
+        </div>
+    </div>
+
+    <script>
+        const etat = document.getElementById('etat');
+        const sortie = document.getElementById('sortie');
+
+        async function api(url) {
+            const res = await fetch(url, { credentials: 'include' });
+            const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON' }));
+            sortie.textContent = JSON.stringify(data, null, 2);
+            return { res, data };
+        }
+
+        async function testerSession() {
+            const { res, data } = await api('/api/auth/moi');
+            etat.textContent = res.ok ? 'Session OK' : 'Session KO';
+        }
+
+        async function testerDashboard() {
+            const { res } = await api('/api/dashboard');
+            etat.textContent = res.ok ? 'Dashboard OK' : 'Dashboard KO';
+        }
+
+        etat.textContent = 'Page chargée. Clique sur Tester la session.';
+    </script>
+</body>
+
+</html>

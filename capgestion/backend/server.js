@@ -21,14 +21,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: true, credentials: true }));
 app.use('/api/comptes-clients', comptesClientsRoutes);
 app.use(session({
+  name: 'capgestion.sid',
   secret: process.env.SESSION_SECRET || 'dev_secret_changez_moi',
   resave: false,
   saveUninitialized: false,
   proxy: true,
   cookie: {
     httpOnly: true,
-    secure: true,
-    sameSite: 'none',
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
     maxAge: 8 * 60 * 60 * 1000
   }
 }));

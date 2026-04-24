@@ -4,6 +4,7 @@ const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
 
+const utilisateursRoutes = require('./routes/utilisateurs');
 const comptesClientsRoutes = require('./routes/comptesClients');
 const authRoutes = require('./routes/auth');
 const rapportRoutes = require('./routes/rapports');
@@ -36,7 +37,7 @@ app.use(session({
 
 app.use(attachUser);
 app.use(express.static(path.join(__dirname, '../frontend')));
-
+app.use('/api/utilisateurs', utilisateursRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/rapports', rapportRoutes);
 app.use('/api/credits', creditRoutes);

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Entrée V2</title>
+    <link rel="stylesheet" href="/css/main.css" />
+</head>
+
+<body class="login-page">
+    <div class="login-wrap">
+        <div class="login-logo">CAP<span>Gestion</span> V2</div>
+        <div class="login-subtitle">Connexion de test sans redirection automatique</div>
+
+        <div class="login-card">
+            <div id="login-erreur" class="alert alert-danger" style="display:none"></div>
+            <div id="login-ok" class="alert alert-success" style="display:none"></div>
+
+            <div class="form-group">
+                <label class="form-label">Adresse email</label>
+                <input type="email" id="email" class="form-input" placeholder="votre@email.com" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Mot de passe</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" />
+            </div>
+
+            <div class="row" style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="login()" id="btn-login">Se connecter</button>
+                <button class="btn" onclick="testerSession()">Tester session</button>
+                <button class="btn" onclick="allerControle()">Ouvrir contrôle V2</button>
+            </div>
+        </div>
+
+        <div class="login-footer">CAPGestion V2</div>
+    </div>
+
+    <script>
+        function showError(msg) {
+            const errDiv = document.getElementById('login-erreur');
+            const okDiv = document.getElementById('login-ok');
+            okDiv.style.display = 'none';
+            errDiv.textContent = msg;
+            errDiv.style.display = 'block';
+        }
+
+        function showOk(msg) {
+            const errDiv = document.getElementById('login-erreur');
+            const okDiv = document.getElementById('login-ok');
+            errDiv.style.display = 'none';
+            okDiv.textContent = msg;
+            okDiv.style.display = 'block';
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const btn = document.getElementById('btn-login');
+
+            if (!email || !password) {
+                showError('Veuillez remplir tous les champs.');
+                return;
+            }
+
+            btn.textContent = 'Connexion...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, mot_de_passe: password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showOk('Connexion réussie. Clique sur “Ouvrir contrôle V2”.');
+                } else {
+                    showError(data.erreur || 'Erreur de connexion.');
+                }
+            } catch (err) {
+                showError('Impossible de contacter le serveur.');
+            } finally {
+                btn.textContent = 'Se connecter';
+                btn.disabled = false;
+            }
+        }
+
+        async function testerSession() {
+            try {
+                const res = await fetch('/api/auth/moi', { credentials: 'include' });
+                const data = await res.json();
+                if (res.ok && data.connecte) {
+                    showOk(`Session active : ${data.utilisateur.nom} (${data.utilisateur.role})`);
+                } else {
+                    showError('Session non active.');
+                }
+            } catch {
+                showError('Impossible de tester la session.');
+            }
+        }
+
+        function allerControle() {
+            window.location.href = '/controle-v2b.html';
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+
+</html>

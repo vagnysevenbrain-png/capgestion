@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contrôle V2B</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        pre {
+            background: #111827;
+            color: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-logo">CAP<span>Gestion</span> Contrôle V2B</div>
+        <div class="topbar-right">
+            <span id="etat-session" class="badge badge-bleu">Non testé</span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+
+    <div class="page-content">
+        <div class="card">
+            <div class="card-title">Tests API</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="testerSession()">Tester la session</button>
+                <button class="btn" onclick="testerDashboard()">Tester le dashboard</button>
+                <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
+                <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
+                <button class="btn" onclick="testerEmployes()">Lister employés</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Résultat</div>
+            <pre id="sortie">Prêt.</pre>
+        </div>
+    </div>
+
+    <script>
+        const sortie = document.getElementById('sortie');
+        const etatSession = document.getElementById('etat-session');
+
+        function afficher(data) {
+            sortie.textContent = typeof data === 'string'
+                ? data
+                : JSON.stringify(data, null, 2);
+        }
+
+        async function api(url, options = {}) {
+            const res = await fetch(url, {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                ...options
+            });
+
+            const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON.' }));
+            afficher(data);
+            return { res, data };
+        }
+
+        async function testerSession() {
+            const { res, data } = await api('/api/auth/moi');
+            if (res.ok && data.connecte) {
+                etatSession.textContent = 'Session OK';
+            } else {
+                etatSession.textContent = 'Session KO';
+            }
+        }
+
+        async function testerDashboard() {
+            const { res } = await api('/api/dashboard');
+            etatSession.textContent = res.ok ? 'Dashboard OK' : 'Dashboard KO';
+        }
+
+        async function testerComptesClients() {
+            await api('/api/comptes-clients');
+        }
+
+        async function testerUtilisateurs() {
+            await api('/api/utilisateurs');
+        }
+
+        async function testerEmployes() {
+            await api('/api/employes');
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (_) { }
+            window.location.href = '/entree-v2.html';
+        }
+    </script>
+</body>
+
+</html>

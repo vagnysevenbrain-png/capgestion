@@ -10,6 +10,10 @@ function toPositiveInt(value, defaultValue = 0) {
   return Math.round(n);
 }
 
+function monthToDate(mois) {
+  return `${mois}-01`;
+}
+
 async function getTotalSalairesMois(siteId, moisDate) {
   const result = await db.query(
     `
@@ -25,76 +29,224 @@ async function getTotalSalairesMois(siteId, moisDate) {
   return Number(result.rows[0]?.total_salaires || 0);
 }
 
+async function getSalairesDetail(siteId, moisDate) {
+  const result = await db.query(
+    `
+    SELECT
+      sm.id,
+      e.id AS employe_id,
+      e.nom,
+      e.poste,
+      sm.mois,
+      sm.salaire_base_snapshot,
+      sm.bonus,
+      sm.retenues,
+      sm.salaire_net,
+      sm.statut,
+      sm.observation,
+      sm.updated_at
+    FROM salaires_mois sm
+    JOIN employes e ON e.id = sm.employe_id
+    WHERE e.site_id = $1
+      AND sm.mois = $2
+    ORDER BY e.nom ASC
+    `,
+    [siteId, moisDate]
+  );
+
+  return result.rows;
+}
+
+async function getChargesRow(siteId, moisDate) {
+  const result = await db.query(
+    `
+    SELECT
+      site_id,
+      mois,
+      salaires,
+      loyer_local,
+      loyer_terrain,
+      telephone_internet,
+      transport_gerante,
+      mairie,
+      photocopie,
+      tontine,
+      sodeci_cie,
+      autres_variables,
+      commentaire_autres_variables,
+      impots,
+      cnps,
+      aide_magasin,
+      bonus,
+      updated_at
+    FROM charges
+    WHERE site_id = $1
+      AND mois = $2
+    `,
+    [siteId, moisDate]
+  );
+
+  return result.rows[0] || null;
+}
+
+function getAutresChargesFromRow(row) {
+  if (!row) return 0;
+
+  return (
+    Number(row.loyer_local || 0) +
+    Number(row.loyer_terrain || 0) +
+    Number(row.sodeci_cie || 0) +
+    Number(row.telephone_internet || 0) +
+    Number(row.transport_gerante || 0) +
+    Number(row.mairie || 0) +
+    Number(row.photocopie || 0) +
+    Number(row.tontine || 0) +
+    Number(row.autres_variables || 0)
+  );
+}
+
+async function getGainMmMois(siteId, moisDate) {
+  const result = await db.query(
+    `
+    SELECT
+      COALESCE(orange_total, 0) +
+      COALESCE(wave, 0) +
+      COALESCE(mtn, 0) +
+      COALESCE(moov, 0) +
+      COALESCE(tresor, 0) +
+      COALESCE(unites, 0) AS gain_mm
+    FROM mm_mensuel
+    WHERE site_id = $1
+      AND mois = $2
+    `,
+    [siteId, moisDate]
+  );
+
+  return Number(result.rows[0]?.gain_mm || 0);
+}
+
+async function getGainGazMois(siteId, moisDate) {
+  const result = await db.query(
+    `
+    SELECT COALESCE(SUM(
+      COALESCE(g.b12_vendues, 0) * COALESCE(gc.b12_commission, 0) +
+      COALESCE(g.b6_vendues, 0)  * COALESCE(gc.b6_commission, 0)
+    ), 0) AS gain_gaz
+    FROM rapports r
+    JOIN rapport_gaz g ON g.rapport_id = r.id
+    JOIN gaz_config gc ON gc.site_id = r.site_id
+    WHERE r.site_id = $1
+      AND date_trunc('month', r.date_rapport)::date = $2
+    `,
+    [siteId, moisDate]
+  );
+
+  return Number(result.rows[0]?.gain_gaz || 0);
+}
+
+function mapChargesToFinance(row, totalSalaires = 0) {
+  return {
+    salaires: totalSalaires,
+    loyer_magasin_principal: Number(row?.loyer_local || 0),
+    loyer_magasin_gaz: Number(row?.loyer_terrain || 0),
+    eau_electricite: Number(row?.sodeci_cie || 0),
+    telephone_internet: Number(row?.telephone_internet || 0),
+    carburant: Number(row?.transport_gerante || 0),
+    taxe_mairie: Number(row?.mairie || 0),
+    photocopie: Number(row?.photocopie || 0),
+    tontine: Number(row?.tontine || 0),
+    autre_variable: Number(row?.autres_variables || 0),
+    commentaire_autre_variable: row?.commentaire_autres_variables || ''
+  };
+}
+
+async function buildFinanceMois(siteId, moisDate) {
+  const [totalSalaires, salaires, chargesRow, gainMm, gainGaz] = await Promise.all([
+    getTotalSalairesMois(siteId, moisDate),
+    getSalairesDetail(siteId, moisDate),
+    getChargesRow(siteId, moisDate),
+    getGainMmMois(siteId, moisDate),
+    getGainGazMois(siteId, moisDate)
+  ]);
+
+  const autresCharges = getAutresChargesFromRow(chargesRow);
+  const totalCharges = totalSalaires + autresCharges;
+  const beneficeNet = gainMm + gainGaz - totalCharges;
+
+  return {
+    mois: moisDate.slice(0, 7),
+    salaires,
+    charges: mapChargesToFinance(chargesRow, totalSalaires),
+    resume: {
+      gain_mm: gainMm,
+      gain_gaz: gainGaz,
+      salaires: totalSalaires,
+      autres_charges: autresCharges,
+      total_charges: totalCharges,
+      benefice_net: beneficeNet
+    }
+  };
+}
+
 /**
  * GET /api/charges/synthese/annuelle?annee=2026
  */
 router.get('/synthese/annuelle', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
-  const annee = req.query.annee || new Date().getFullYear();
+  const annee = String(req.query.annee || new Date().getFullYear());
 
   try {
-    const result = await db.query(
-      `
-      SELECT
-        to_char(m.mois, 'YYYY-MM') AS mois,
+    const moisList = Array.from({ length: 12 }, (_, i) => {
+      const mois = String(i + 1).padStart(2, '0');
+      return `${annee}-${mois}-01`;
+    });
 
-        COALESCE((
-          SELECT
-            COALESCE(mm.orange_total, 0) +
-            COALESCE(mm.wave, 0) +
-            COALESCE(mm.mtn, 0) +
-            COALESCE(mm.moov, 0) +
-            COALESCE(mm.tresor, 0) +
-            COALESCE(mm.unites, 0)
-          FROM mm_mensuel mm
-          WHERE mm.site_id = $1
-            AND mm.mois = m.mois
-        ), 0) AS gain_mm,
+    const rows = [];
+    for (const moisDate of moisList) {
+      const finance = await buildFinanceMois(siteId, moisDate);
+      rows.push({
+        mois: finance.mois,
+        gain_mm: finance.resume.gain_mm,
+        gain_gaz: finance.resume.gain_gaz,
+        salaires: finance.resume.salaires,
+        autres_charges: finance.resume.autres_charges,
+        total_charges: finance.resume.total_charges,
+        benefice_net: finance.resume.benefice_net
+      });
+    }
 
-        COALESCE((
-          SELECT SUM(
-            COALESCE(g.b12_vendues, 0) * gc.b12_commission +
-            COALESCE(g.b6_vendues, 0)  * gc.b6_commission
-          )
-          FROM rapport_gaz g
-          JOIN rapports r ON g.rapport_id = r.id
-          JOIN gaz_config gc ON gc.site_id = r.site_id
-          WHERE r.site_id = $1
-            AND date_trunc('month', r.date_rapport)::date = m.mois
-        ), 0) AS gain_gaz,
-
-        COALESCE((
-          SELECT
-            COALESCE(c.salaires, 0) +
-            COALESCE(c.loyer_local, 0) +
-            COALESCE(c.loyer_terrain, 0) +
-            COALESCE(c.telephone_internet, 0) +
-            COALESCE(c.transport_gerante, 0) +
-            COALESCE(c.mairie, 0) +
-            COALESCE(c.impots, 0) +
-            COALESCE(c.cnps, 0) +
-            COALESCE(c.photocopie, 0) +
-            COALESCE(c.tontine, 0) +
-            COALESCE(c.sodeci_cie, 0) +
-            COALESCE(c.aide_magasin, 0) +
-            COALESCE(c.bonus, 0) +
-            COALESCE(c.autres_variables, 0)
-          FROM charges c
-          WHERE c.site_id = $1
-            AND c.mois = m.mois
-        ), 0) AS total_charges
-
-      FROM generate_series(
-        ($2::text || '-01-01')::date,
-        ($2::text || '-12-01')::date,
-        '1 month'::interval
-      ) AS m(mois)
-      ORDER BY m.mois
-      `,
-      [siteId, annee]
+    const totalAnnuel = rows.reduce(
+      (acc, row) => {
+        acc.gain_mm += row.gain_mm;
+        acc.gain_gaz += row.gain_gaz;
+        acc.salaires += row.salaires;
+        acc.autres_charges += row.autres_charges;
+        acc.total_charges += row.total_charges;
+        acc.benefice_net += row.benefice_net;
+        return acc;
+      },
+      {
+        gain_mm: 0,
+        gain_gaz: 0,
+        salaires: 0,
+        autres_charges: 0,
+        total_charges: 0,
+        benefice_net: 0
+      }
     );
 
-    res.json(result.rows);
+    const sortedByBenefice = [...rows].sort((a, b) => b.benefice_net - a.benefice_net);
+
+    res.json({
+      annee,
+      mois: rows,
+      resume_annuel: {
+        ...totalAnnuel,
+        moyenne_mensuelle_benefice: Number((totalAnnuel.benefice_net / 12).toFixed(2)),
+        meilleur_mois: sortedByBenefice[0] || null,
+        pire_mois: sortedByBenefice[sortedByBenefice.length - 1] || null
+      }
+    });
   } catch (err) {
     console.error('Erreur synthèse annuelle charges:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
@@ -107,68 +259,46 @@ router.get('/synthese/annuelle', requireAuth, requireProprietaire, async (req, r
  */
 router.get('/:mois', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
-  const moisDate = `${req.params.mois}-01`;
+  const mois = req.params.mois;
+
+  if (!/^\d{4}-\d{2}$/.test(mois)) {
+    return res.status(400).json({ erreur: 'Le mois doit être au format YYYY-MM.' });
+  }
 
   try {
-    const chargesRes = await db.query(
-      `
-      SELECT *
-      FROM charges
-      WHERE site_id = $1
-        AND mois = $2
-      `,
-      [siteId, moisDate]
-    );
-
-    const salairesRes = await db.query(
-      `
-      SELECT
-        sm.id,
-        e.id AS employe_id,
-        e.nom,
-        e.poste,
-        sm.salaire_base_snapshot,
-        sm.bonus,
-        sm.retenues,
-        sm.salaire_net,
-        sm.statut,
-        sm.observation
-      FROM salaires_mois sm
-      JOIN employes e ON e.id = sm.employe_id
-      WHERE e.site_id = $1
-        AND sm.mois = $2
-      ORDER BY e.nom ASC
-      `,
-      [siteId, moisDate]
-    );
-
-    const totalSalaires = await getTotalSalairesMois(siteId, moisDate);
-
-    res.json({
-      charges: chargesRes.rows[0] || null,
-      salaires: salairesRes.rows,
-      total_salaires: totalSalaires
-    });
+    const finance = await buildFinanceMois(siteId, monthToDate(mois));
+    res.json(finance);
   } catch (err) {
-    console.error('Erreur lecture charges:', err);
+    console.error('Erreur lecture charges finance:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
   }
 });
 
 /**
  * POST /api/charges
- * Enregistre les charges du mois
- * Le champ salaires est calculé automatiquement depuis salaires_mois
+ * Enregistre les charges mensuelles simplifiées
  */
 router.post('/', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
-  const { mois, ...champs } = req.body;
+  const {
+    mois,
+    loyer_magasin_principal,
+    loyer_magasin_gaz,
+    eau_electricite,
+    telephone_internet,
+    carburant,
+    taxe_mairie,
+    photocopie,
+    tontine,
+    autre_variable,
+    commentaire_autre_variable
+  } = req.body;
 
   if (!mois || !/^\d{4}-\d{2}$/.test(mois)) {
     return res.status(400).json({ erreur: 'Le mois doit être au format YYYY-MM.' });
   }
 
-  const moisDate = `${mois}-01`;
+  const moisDate = monthToDate(mois);
 
   try {
     const totalSalaires = await getTotalSalairesMois(siteId, moisDate);
@@ -184,17 +314,18 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         telephone_internet,
         transport_gerante,
         mairie,
-        impots,
-        cnps,
         photocopie,
         tontine,
         sodeci_cie,
+        autres_variables,
+        commentaire_autres_variables,
+        impots,
+        cnps,
         aide_magasin,
-        bonus,
-        autres_variables
+        bonus
       )
       VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,0,0,0,0
       )
       ON CONFLICT (site_id, mois)
       DO UPDATE SET
@@ -204,43 +335,42 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         telephone_internet = EXCLUDED.telephone_internet,
         transport_gerante = EXCLUDED.transport_gerante,
         mairie = EXCLUDED.mairie,
-        impots = EXCLUDED.impots,
-        cnps = EXCLUDED.cnps,
         photocopie = EXCLUDED.photocopie,
         tontine = EXCLUDED.tontine,
         sodeci_cie = EXCLUDED.sodeci_cie,
-        aide_magasin = EXCLUDED.aide_magasin,
-        bonus = EXCLUDED.bonus,
         autres_variables = EXCLUDED.autres_variables,
+        commentaire_autres_variables = EXCLUDED.commentaire_autres_variables,
+        impots = 0,
+        cnps = 0,
+        aide_magasin = 0,
+        bonus = 0,
         updated_at = NOW()
       `,
       [
         siteId,
         moisDate,
         totalSalaires,
-        toPositiveInt(champs.loyer_local),
-        toPositiveInt(champs.loyer_terrain),
-        toPositiveInt(champs.telephone_internet),
-        toPositiveInt(champs.transport_gerante),
-        toPositiveInt(champs.mairie),
-        toPositiveInt(champs.impots),
-        toPositiveInt(champs.cnps),
-        toPositiveInt(champs.photocopie),
-        toPositiveInt(champs.tontine),
-        toPositiveInt(champs.sodeci_cie),
-        toPositiveInt(champs.aide_magasin),
-        toPositiveInt(champs.bonus),
-        toPositiveInt(champs.autres_variables)
+        toPositiveInt(loyer_magasin_principal),
+        toPositiveInt(loyer_magasin_gaz),
+        toPositiveInt(telephone_internet),
+        toPositiveInt(carburant),
+        toPositiveInt(taxe_mairie),
+        toPositiveInt(photocopie),
+        toPositiveInt(tontine),
+        toPositiveInt(eau_electricite),
+        toPositiveInt(autre_variable),
+        commentaire_autre_variable?.trim() || null
       ]
     );
 
+    const finance = await buildFinanceMois(siteId, moisDate);
+
     res.json({
       ok: true,
-      mois,
-      salaires_calcules: totalSalaires
+      ...finance
     });
   } catch (err) {
-    console.error('Erreur sauvegarde charges:', err);
+    console.error('Erreur sauvegarde charges finance:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
   }
 });

@@ -18,6 +18,38 @@
             font-size: 12px;
             border: 1px solid #DCE4EC;
         }
+
+        .finance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+
+        .finance-table th,
+        .finance-table td {
+            border: 1px solid #DCE4EC;
+            padding: 8px 10px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .finance-table th {
+            background: #F8FBF3;
+            font-weight: 700;
+        }
+
+        .salary-row-card {
+            border: 1px solid #DFE8D4;
+            border-radius: 14px;
+            padding: 12px;
+            background: #FCFDF9;
+            margin-bottom: 10px;
+        }
+
+        .owner-only[hidden] {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -204,6 +236,108 @@
             </div>
         </div>
 
+        <div class="card owner-only" id="finance-section" hidden>
+            <div class="card-title">Finance</div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Mois de travail (YYYY-MM)</label>
+                    <input id="finance-mois" class="form-input" placeholder="2026-04" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Année de synthèse</label>
+                    <input id="finance-annee" class="form-input" placeholder="2026" />
+                </div>
+            </div>
+
+            <div class="actions" style="margin-bottom: 14px;">
+                <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du mois</button>
+                <button class="btn" onclick="enregistrerTousSalairesMois()">Enregistrer salaires du mois</button>
+                <button class="btn" onclick="enregistrerChargesMensuelles()">Enregistrer charges mensuelles</button>
+                <button class="btn" onclick="chargerSyntheseAnnuelle()">Charger synthèse annuelle</button>
+            </div>
+
+            <div class="section-label">Résumé mensuel</div>
+            <div class="dashboard-grid">
+                <div class="dash-card">
+                    <div class="dash-label">Gain MM</div>
+                    <div class="dash-value" id="fin-gain-mm">0 FCFA</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Gain gaz</div>
+                    <div class="dash-value" id="fin-gain-gaz">0 FCFA</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Salaires</div>
+                    <div class="dash-value" id="fin-salaires">0 FCFA</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Autres charges</div>
+                    <div class="dash-value" id="fin-autres-charges">0 FCFA</div>
+                </div>
+                <div class="dash-card">
+                    <div class="dash-label">Total charges</div>
+                    <div class="dash-value" id="fin-total-charges">0 FCFA</div>
+                </div>
+                <div class="dash-card" id="fin-card-benefice">
+                    <div class="dash-label">Bénéfice net</div>
+                    <div class="dash-value" id="fin-benefice">0 FCFA</div>
+                </div>
+            </div>
+
+            <div class="section-label">Salaires du mois</div>
+            <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
+
+            <div class="section-label">Charges mensuelles</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Loyer magasin principal</label>
+                    <input id="ch-loyer-principal" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Loyer magasin gaz</label>
+                    <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Eau / Électricité</label>
+                    <input id="ch-eau-elec" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Téléphone / Internet</label>
+                    <input id="ch-tel-internet" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Carburant</label>
+                    <input id="ch-carburant" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Taxe mairie</label>
+                    <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Photocopie</label>
+                    <input id="ch-photocopie" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tontine</label>
+                    <input id="ch-tontine" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Autre variable</label>
+                    <input id="ch-autre-variable" class="form-input" placeholder="0" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Commentaire autre variable</label>
+                <textarea id="ch-commentaire" class="form-input"
+                    placeholder="Précision sur les charges variables"></textarea>
+            </div>
+
+            <div class="section-label">Synthèse annuelle</div>
+            <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.</div>
+        </div>
+
         <div class="card">
             <div class="card-title">Créer un compte client</div>
             <div class="grid-2">
@@ -263,7 +397,7 @@
             <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
         </div>
 
-        <div class="card">
+        <div class="card owner-only" hidden>
             <div class="card-title">Créer un employé</div>
             <div class="grid-3">
                 <div class="form-group"><label class="form-label">Nom</label><input id="emp-nom" class="form-input"
@@ -276,7 +410,7 @@
             <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
         </div>
 
-        <div class="card">
+        <div class="card owner-only" hidden>
             <div class="card-title">Créer un utilisateur / gérant</div>
             <div class="grid-2">
                 <div class="form-group"><label class="form-label">Nom</label><input id="usr-nom" class="form-input"
@@ -305,7 +439,7 @@
             <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l’utilisateur</button>
         </div>
 
-        <div class="card">
+        <div class="card owner-only" hidden>
             <div class="card-title">Fond mis à disposition</div>
             <div class="grid-3">
                 <div class="form-group">
@@ -323,7 +457,7 @@
             <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement fond</button>
         </div>
 
-        <div class="card">
+        <div class="card owner-only" hidden>
             <div class="card-title">Mise à jour des fonds MM</div>
             <div class="grid-3">
                 <div class="form-group"><label class="form-label">Orange Revendeur</label><input id="mm-orange-rev"
@@ -348,7 +482,7 @@
             <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds MM</button>
         </div>
 
-        <div class="card">
+        <div class="card owner-only" hidden>
             <div class="card-title">Paramètres et stock gaz</div>
             <div class="grid-3">
                 <div class="form-group"><label class="form-label">B12 pleines</label><input id="gaz-b12-pleines"
@@ -386,6 +520,7 @@
         const etatSession = document.getElementById('etat-session');
         const selectClient = document.getElementById('mvt-compte-id');
         let depensesRapport = [];
+        let currentUser = null;
 
         function afficher(data) {
             sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
@@ -399,6 +534,15 @@
             const el = document.getElementById(id);
             el.classList.remove('dash-good', 'dash-bad', 'dash-warn');
             if (state) el.classList.add(state);
+        }
+
+        function currentMonth() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function currentYear() {
+            return String(new Date().getFullYear());
         }
 
         function renderDashboardCards(data) {
@@ -427,6 +571,122 @@
             setCardState('card-commission', Number(activite.commission_gaz_jour) > 0 ? 'dash-good' : '');
             setCardState('card-fonds', Number(fonds.fonds_disponibles) > 0 ? 'dash-good' : '');
             setCardState('card-caisse-dispo', Number(activite.caisse_gaz_disponible) > 0 ? 'dash-warn' : '');
+        }
+
+        function renderFinanceResume(resume = {}) {
+            document.getElementById('fin-gain-mm').textContent = fcfa(resume.gain_mm);
+            document.getElementById('fin-gain-gaz').textContent = fcfa(resume.gain_gaz);
+            document.getElementById('fin-salaires').textContent = fcfa(resume.salaires);
+            document.getElementById('fin-autres-charges').textContent = fcfa(resume.autres_charges);
+            document.getElementById('fin-total-charges').textContent = fcfa(resume.total_charges);
+            document.getElementById('fin-benefice').textContent = fcfa(resume.benefice_net);
+
+            const benefCard = document.getElementById('fin-card-benefice');
+            benefCard.classList.remove('dash-good', 'dash-bad');
+            benefCard.classList.add(Number(resume.benefice_net) >= 0 ? 'dash-good' : 'dash-bad');
+        }
+
+        function remplirChargesMensuelles(charges = {}) {
+            document.getElementById('ch-loyer-principal').value = charges.loyer_magasin_principal ?? 0;
+            document.getElementById('ch-loyer-gaz').value = charges.loyer_magasin_gaz ?? 0;
+            document.getElementById('ch-eau-elec').value = charges.eau_electricite ?? 0;
+            document.getElementById('ch-tel-internet').value = charges.telephone_internet ?? 0;
+            document.getElementById('ch-carburant').value = charges.carburant ?? 0;
+            document.getElementById('ch-taxe-mairie').value = charges.taxe_mairie ?? 0;
+            document.getElementById('ch-photocopie').value = charges.photocopie ?? 0;
+            document.getElementById('ch-tontine').value = charges.tontine ?? 0;
+            document.getElementById('ch-autre-variable').value = charges.autre_variable ?? 0;
+            document.getElementById('ch-commentaire').value = charges.commentaire_autre_variable ?? '';
+        }
+
+        function renderFinanceSalaires(employes = [], salaires = []) {
+            const container = document.getElementById('finance-salaires-liste');
+            if (!employes.length) {
+                container.innerHTML = '<span class="muted">Aucun employé actif.</span>';
+                return;
+            }
+
+            const salairesByEmploye = {};
+            salaires.forEach(s => {
+                salairesByEmploye[s.employe_id] = s;
+            });
+
+            container.innerHTML = employes.map(emp => {
+                const s = salairesByEmploye[emp.id] || {};
+                return `
+          <div class="salary-row-card" data-employe-id="${emp.id}">
+            <div style="font-weight:700; margin-bottom:8px;">${emp.nom} ${emp.poste ? '- ' + emp.poste : ''}</div>
+            <div class="grid-3">
+              <div class="form-group">
+                <label class="form-label">Salaire de base</label>
+                <input class="form-input salaire-base" value="${Number(emp.salaire_base || 0)}" readonly />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Bonus</label>
+                <input class="form-input salaire-bonus" value="${Number(s.bonus || 0)}" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Retenues</label>
+                <input class="form-input salaire-retenues" value="${Number(s.retenues || 0)}" />
+              </div>
+            </div>
+            <div class="muted">Net actuel : ${fcfa(Number(s.salaire_net || emp.salaire_base || 0))}</div>
+          </div>
+        `;
+            }).join('');
+        }
+
+        function renderSyntheseAnnuelle(data) {
+            const container = document.getElementById('finance-synthese-container');
+            const rows = data?.mois || [];
+            const resume = data?.resume_annuel || null;
+
+            if (!rows.length) {
+                container.innerHTML = '<span class="muted">Aucune donnée annuelle.</span>';
+                return;
+            }
+
+            container.innerHTML = `
+        <table class="finance-table">
+          <thead>
+            <tr>
+              <th>Mois</th>
+              <th>Gain MM</th>
+              <th>Gain gaz</th>
+              <th>Salaires</th>
+              <th>Autres charges</th>
+              <th>Total charges</th>
+              <th>Bénéfice net</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr>
+                <td>${r.mois}</td>
+                <td>${fcfa(r.gain_mm)}</td>
+                <td>${fcfa(r.gain_gaz)}</td>
+                <td>${fcfa(r.salaires)}</td>
+                <td>${fcfa(r.autres_charges)}</td>
+                <td>${fcfa(r.total_charges)}</td>
+                <td>${fcfa(r.benefice_net)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div style="margin-top:12px;" class="muted">
+          Total annuel bénéfice : <strong>${fcfa(resume?.benefice_net || 0)}</strong><br>
+          Moyenne mensuelle bénéfice : <strong>${fcfa(resume?.moyenne_mensuelle_benefice || 0)}</strong><br>
+          Meilleur mois : <strong>${resume?.meilleur_mois?.mois || '-'}</strong><br>
+          Pire mois : <strong>${resume?.pire_mois?.mois || '-'}</strong>
+        </div>
+      `;
+        }
+
+        function applyRoleVisibility() {
+            const isOwner = currentUser?.role === 'proprietaire';
+            document.querySelectorAll('.owner-only').forEach(el => {
+                el.hidden = !isOwner;
+            });
         }
 
         function valeurChamp(id) {
@@ -559,7 +819,13 @@
 
         async function testerSession() {
             const { res, data } = await api('/api/auth/moi');
-            etatSession.textContent = (res.ok && data.connecte) ? 'Session OK' : 'Session KO';
+            if (res.ok && data.connecte) {
+                currentUser = data.utilisateur;
+                etatSession.textContent = `Session OK - ${data.utilisateur.role}`;
+                applyRoleVisibility();
+            } else {
+                etatSession.textContent = 'Session KO';
+            }
         }
 
         async function testerDashboard() {
@@ -580,9 +846,7 @@
         }
 
         function chargerRapportsDuMoisCourant() {
-            const d = new Date();
-            const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            document.getElementById('hist-mois').value = mois;
+            document.getElementById('hist-mois').value = currentMonth();
             chargerRapports();
         }
 
@@ -621,6 +885,99 @@
             if (res.ok) {
                 await testerDashboard();
             }
+        }
+
+        async function chargerFinanceMois() {
+            const mois = valeurChamp('finance-mois').trim();
+            if (!mois) {
+                afficher({ erreur: 'Renseigne le mois finance.' });
+                return;
+            }
+
+            const [employesRes, financeRes] = await Promise.all([
+                fetchJson('/api/employes?actif=true'),
+                fetchJson(`/api/charges/${encodeURIComponent(mois)}`)
+            ]);
+
+            if (financeRes.res.ok) {
+                renderFinanceResume(financeRes.data.resume);
+                remplirChargesMensuelles(financeRes.data.charges);
+            } else {
+                afficher(financeRes.data);
+            }
+
+            if (employesRes.res.ok) {
+                renderFinanceSalaires(employesRes.data, financeRes.data.salaires || []);
+            }
+        }
+
+        async function enregistrerTousSalairesMois() {
+            const mois = valeurChamp('finance-mois').trim();
+            if (!mois) {
+                afficher({ erreur: 'Renseigne le mois finance.' });
+                return;
+            }
+
+            const rows = Array.from(document.querySelectorAll('#finance-salaires-liste [data-employe-id]'));
+            for (const row of rows) {
+                const employeId = row.dataset.employeId;
+                const bonus = row.querySelector('.salaire-bonus').value;
+                const retenues = row.querySelector('.salaire-retenues').value;
+
+                await fetchJson(`/api/employes/${employeId}/salaires`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        mois,
+                        bonus,
+                        retenues,
+                        statut: 'valide',
+                        observation: null
+                    })
+                });
+            }
+
+            await chargerFinanceMois();
+            afficher({ ok: true, message: 'Salaires du mois enregistrés.' });
+        }
+
+        async function enregistrerChargesMensuelles() {
+            const mois = valeurChamp('finance-mois').trim();
+            if (!mois) {
+                afficher({ erreur: 'Renseigne le mois finance.' });
+                return;
+            }
+
+            const { res, data } = await api('/api/charges', {
+                method: 'POST',
+                body: JSON.stringify({
+                    mois,
+                    loyer_magasin_principal: valeurChamp('ch-loyer-principal'),
+                    loyer_magasin_gaz: valeurChamp('ch-loyer-gaz'),
+                    eau_electricite: valeurChamp('ch-eau-elec'),
+                    telephone_internet: valeurChamp('ch-tel-internet'),
+                    carburant: valeurChamp('ch-carburant'),
+                    taxe_mairie: valeurChamp('ch-taxe-mairie'),
+                    photocopie: valeurChamp('ch-photocopie'),
+                    tontine: valeurChamp('ch-tontine'),
+                    autre_variable: valeurChamp('ch-autre-variable'),
+                    commentaire_autre_variable: valeurChamp('ch-commentaire')
+                })
+            });
+
+            if (res.ok) {
+                renderFinanceResume(data.resume);
+            }
+        }
+
+        async function chargerSyntheseAnnuelle() {
+            const annee = valeurChamp('finance-annee').trim();
+            if (!annee) {
+                afficher({ erreur: 'Renseigne l’année.' });
+                return;
+            }
+
+            const { res, data } = await api(`/api/charges/synthese/annuelle?annee=${encodeURIComponent(annee)}`);
+            if (res.ok) renderSyntheseAnnuelle(data);
         }
 
         async function testerComptesClients() {
@@ -762,11 +1119,25 @@
             window.location.href = '/entree-v2.html';
         }
 
-        document.getElementById('r-date').value = todayISO();
-        refreshDepensesRapportUI();
-        chargerListeClientsDansSelect();
-        chargerEtatFond();
-        testerDashboard();
+        async function initApp() {
+            document.getElementById('r-date').value = todayISO();
+            document.getElementById('finance-mois').value = currentMonth();
+            document.getElementById('finance-annee').value = currentYear();
+            document.getElementById('hist-mois').value = currentMonth();
+
+            refreshDepensesRapportUI();
+            await chargerListeClientsDansSelect();
+            await testerSession();
+            await chargerEtatFond();
+            await testerDashboard();
+
+            if (currentUser?.role === 'proprietaire') {
+                await chargerFinanceMois();
+                await chargerSyntheseAnnuelle();
+            }
+        }
+
+        initApp();
     </script>
 </body>
 

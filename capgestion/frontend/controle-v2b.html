@@ -41,6 +41,7 @@
             <div class="actions">
                 <button class="btn btn-primary" onclick="testerSession()">Tester la session</button>
                 <button class="btn" onclick="testerDashboard()">Tester le dashboard</button>
+                <button class="btn" onclick="chargerEtatFond()">Charger fond / gaz</button>
                 <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
                 <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
                 <button class="btn" onclick="testerEmployes()">Lister employés</button>
@@ -165,6 +166,145 @@
         </div>
 
         <div class="card">
+            <div class="card-title">Fond mis à disposition</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="fmd-type" class="form-input">
+                        <option value="appro">appro</option>
+                        <option value="retrait">retrait</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Montant</label>
+                    <input id="fmd-montant" class="form-input" placeholder="Ex: 200000" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Motif</label>
+                    <input id="fmd-motif" class="form-input" placeholder="Motif" />
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement fond</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Mise à jour des fonds MM</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Orange Revendeur</label>
+                    <input id="mm-orange-rev" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Orange PDV</label>
+                    <input id="mm-orange-pdv" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Wave</label>
+                    <input id="mm-wave" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">MTN</label>
+                    <input id="mm-mtn" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Moov</label>
+                    <input id="mm-moov" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Moov P2</label>
+                    <input id="mm-moov-p2" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trésor</label>
+                    <input id="mm-tresor" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Unités</label>
+                    <input id="mm-unites" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Espèces</label>
+                    <input id="mm-especes" class="form-input" placeholder="0" />
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds MM</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Paramètres et stock gaz</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">B12 pleines</label>
+                    <input id="gaz-b12-pleines" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B12 vides</label>
+                    <input id="gaz-b12-vides" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B6 pleines</label>
+                    <input id="gaz-b6-pleines" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B6 vides</label>
+                    <input id="gaz-b6-vides" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission B12</label>
+                    <input id="gaz-b12-commission" class="form-input" placeholder="450" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission B6</label>
+                    <input id="gaz-b6-commission" class="form-input" placeholder="350" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Prix vente B12</label>
+                    <input id="gaz-b12-prix" class="form-input" placeholder="4950" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Prix vente B6</label>
+                    <input id="gaz-b6-prix" class="form-input" placeholder="1850" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Coût recharge B12</label>
+                    <input id="gaz-b12-recharge" class="form-input" placeholder="4850" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Coût recharge B6</label>
+                    <input id="gaz-b6-recharge" class="form-input" placeholder="1850" />
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Caisse gaz</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="cg-type" class="form-input">
+                        <option value="vente">vente</option>
+                        <option value="recharge">recharge</option>
+                        <option value="depense">depense</option>
+                        <option value="ajustement_plus">ajustement_plus</option>
+                        <option value="ajustement_moins">ajustement_moins</option>
+                        <option value="appro">appro</option>
+                        <option value="retrait">retrait</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Montant</label>
+                    <input id="cg-montant" class="form-input" placeholder="Ex: 15000" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Note</label>
+                    <input id="cg-note" class="form-input" placeholder="Motif" />
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="ajouterMouvementCaisseGaz()">Ajouter mouvement caisse gaz</button>
+        </div>
+
+        <div class="card">
             <div class="card-title">Résultat</div>
             <pre id="sortie">Prêt.</pre>
         </div>
@@ -181,7 +321,7 @@
                 : JSON.stringify(data, null, 2);
         }
 
-        async function api(url, options = {}) {
+        async function fetchJson(url, options = {}) {
             const res = await fetch(url, {
                 credentials: 'include',
                 headers: {
@@ -192,16 +332,18 @@
             });
 
             const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON.' }));
+            return { res, data };
+        }
+
+        async function api(url, options = {}) {
+            const { res, data } = await fetchJson(url, options);
             afficher(data);
             return { res, data };
         }
 
         async function chargerListeClientsDansSelect() {
             try {
-                const res = await fetch('/api/comptes-clients', {
-                    credentials: 'include'
-                });
-                const data = await res.json().catch(() => []);
+                const { data } = await fetchJson('/api/comptes-clients');
 
                 selectClient.innerHTML = '<option value="">Choisir un client</option>';
 
@@ -218,18 +360,47 @@
             }
         }
 
+        function remplirFormulaireFond(data) {
+            const fond = data.fond_mm || {};
+            const gaz = data.gaz || {};
+
+            document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
+            document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
+            document.getElementById('mm-wave').value = fond.wave ?? 0;
+            document.getElementById('mm-mtn').value = fond.mtn ?? 0;
+            document.getElementById('mm-moov').value = fond.moov ?? 0;
+            document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
+            document.getElementById('mm-tresor').value = fond.tresor ?? 0;
+            document.getElementById('mm-unites').value = fond.unites ?? 0;
+            document.getElementById('mm-especes').value = fond.especes ?? 0;
+
+            document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
+            document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
+            document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
+            document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
+            document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
+            document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
+            document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
+            document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
+            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4850;
+            document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
+        }
+
         async function testerSession() {
             const { res, data } = await api('/api/auth/moi');
-            if (res.ok && data.connecte) {
-                etatSession.textContent = 'Session OK';
-            } else {
-                etatSession.textContent = 'Session KO';
-            }
+            etatSession.textContent = (res.ok && data.connecte) ? 'Session OK' : 'Session KO';
         }
 
         async function testerDashboard() {
             const { res } = await api('/api/dashboard');
             etatSession.textContent = res.ok ? 'Dashboard OK' : 'Dashboard KO';
+        }
+
+        async function chargerEtatFond() {
+            const { res, data } = await api('/api/fond');
+            if (res.ok) {
+                remplirFormulaireFond(data);
+            }
         }
 
         async function testerComptesClients() {
@@ -308,6 +479,63 @@
             });
         }
 
+        async function ajouterFondMisADisposition() {
+            await api('/api/fond/mise-a-disposition', {
+                method: 'POST',
+                body: JSON.stringify({
+                    type_mvt: document.getElementById('fmd-type').value,
+                    montant: document.getElementById('fmd-montant').value,
+                    motif: document.getElementById('fmd-motif').value
+                })
+            });
+        }
+
+        async function mettreAJourFondMM() {
+            await api('/api/fond/mm', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    orange_rev: document.getElementById('mm-orange-rev').value,
+                    orange_pdv: document.getElementById('mm-orange-pdv').value,
+                    wave: document.getElementById('mm-wave').value,
+                    mtn: document.getElementById('mm-mtn').value,
+                    moov: document.getElementById('mm-moov').value,
+                    moov_p2: document.getElementById('mm-moov-p2').value,
+                    tresor: document.getElementById('mm-tresor').value,
+                    unites: document.getElementById('mm-unites').value,
+                    especes: document.getElementById('mm-especes').value
+                })
+            });
+        }
+
+        async function mettreAJourGaz() {
+            await api('/api/fond/gaz', {
+                method: 'PUT',
+                body: JSON.stringify({
+                    b12_pleines: document.getElementById('gaz-b12-pleines').value,
+                    b12_vides: document.getElementById('gaz-b12-vides').value,
+                    b6_pleines: document.getElementById('gaz-b6-pleines').value,
+                    b6_vides: document.getElementById('gaz-b6-vides').value,
+                    b12_commission: document.getElementById('gaz-b12-commission').value,
+                    b6_commission: document.getElementById('gaz-b6-commission').value,
+                    b12_prix_vente: document.getElementById('gaz-b12-prix').value,
+                    b6_prix_vente: document.getElementById('gaz-b6-prix').value,
+                    b12_cout_recharge: document.getElementById('gaz-b12-recharge').value,
+                    b6_cout_recharge: document.getElementById('gaz-b6-recharge').value
+                })
+            });
+        }
+
+        async function ajouterMouvementCaisseGaz() {
+            await api('/api/fond/gaz/caisse', {
+                method: 'POST',
+                body: JSON.stringify({
+                    type_mvt: document.getElementById('cg-type').value,
+                    montant: document.getElementById('cg-montant').value,
+                    note: document.getElementById('cg-note').value
+                })
+            });
+        }
+
         async function logout() {
             try {
                 await fetch('/api/auth/logout', {
@@ -319,6 +547,7 @@
         }
 
         chargerListeClientsDansSelect();
+        chargerEtatFond();
     </script>
 </body>
 

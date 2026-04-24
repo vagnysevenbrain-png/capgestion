@@ -70,8 +70,10 @@
             <div class="card-title">Ajouter un mouvement sur un compte client</div>
             <div class="grid-2">
                 <div class="form-group">
-                    <label class="form-label">ID compte client</label>
-                    <input id="mvt-compte-id" class="form-input" placeholder="Ex: 1" />
+                    <label class="form-label">Client</label>
+                    <select id="mvt-compte-id" class="form-input">
+                        <option value="">Choisir un client</option>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Type</label>
@@ -91,8 +93,12 @@
                     <input id="mvt-montant" class="form-input" placeholder="Ex: 5000" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Mode paiement</label>
-                    <input id="mvt-mode" class="form-input" placeholder="Espèces / Wave / Orange..." />
+                    <label class="form-label">Mode de paiement</label>
+                    <select id="mvt-mode" class="form-input">
+                        <option value="">Choisir</option>
+                        <option value="mobile_money">mobile money</option>
+                        <option value="especes">espèces</option>
+                    </select>
                 </div>
             </div>
 
@@ -167,6 +173,7 @@
     <script>
         const sortie = document.getElementById('sortie');
         const etatSession = document.getElementById('etat-session');
+        const selectClient = document.getElementById('mvt-compte-id');
 
         function afficher(data) {
             sortie.textContent = typeof data === 'string'
@@ -189,6 +196,28 @@
             return { res, data };
         }
 
+        async function chargerListeClientsDansSelect() {
+            try {
+                const res = await fetch('/api/comptes-clients', {
+                    credentials: 'include'
+                });
+                const data = await res.json().catch(() => []);
+
+                selectClient.innerHTML = '<option value="">Choisir un client</option>';
+
+                if (Array.isArray(data)) {
+                    data.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.id;
+                        option.textContent = `${client.nom}${client.telephone ? ' - ' + client.telephone : ''}`;
+                        selectClient.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Erreur chargement liste clients:', err);
+            }
+        }
+
         async function testerSession() {
             const { res, data } = await api('/api/auth/moi');
             if (res.ok && data.connecte) {
@@ -205,10 +234,11 @@
 
         async function testerComptesClients() {
             await api('/api/comptes-clients');
+            await chargerListeClientsDansSelect();
         }
 
         async function creerCompteClient() {
-            await api('/api/comptes-clients', {
+            const { res } = await api('/api/comptes-clients', {
                 method: 'POST',
                 body: JSON.stringify({
                     nom: document.getElementById('cc-nom').value,
@@ -216,13 +246,20 @@
                     observation: document.getElementById('cc-obs').value
                 })
             });
+
+            if (res.ok) {
+                document.getElementById('cc-nom').value = '';
+                document.getElementById('cc-tel').value = '';
+                document.getElementById('cc-obs').value = '';
+                await chargerListeClientsDansSelect();
+            }
         }
 
         async function ajouterMouvementCompte() {
             const compteId = document.getElementById('mvt-compte-id').value.trim();
 
             if (!compteId) {
-                afficher({ erreur: 'ID compte client requis.' });
+                afficher({ erreur: 'Veuillez choisir un client.' });
                 return;
             }
 
@@ -280,6 +317,8 @@
             } catch (_) { }
             window.location.href = '/entree-v2.html';
         }
+
+        chargerListeClientsDansSelect();
     </script>
 </body>
 

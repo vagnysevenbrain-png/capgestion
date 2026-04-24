@@ -146,8 +146,8 @@
                 userBox.textContent = `${data.utilisateur.nom} (${data.utilisateur.role})`;
                 afficher(data);
             } catch (err) {
+                userBox.textContent = 'Non connecté';
                 afficher(err);
-                window.location.href = '/login.html';
             }
         }
 

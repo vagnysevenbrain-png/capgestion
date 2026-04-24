@@ -12,7 +12,7 @@ const creditRoutes = require('./routes/credits');
 const chargeRoutes = require('./routes/charges');
 const fondRoutes = require('./routes/fond');
 const { attachUser } = require('./middleware/auth');
-
+const dashboardRoutes = require('./routes/dashboard');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -44,7 +44,7 @@ app.use('/api/credits', creditRoutes);
 app.use('/api/charges', chargeRoutes);
 app.use('/api/fond', fondRoutes);
 app.use('/api/employes', employesRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });

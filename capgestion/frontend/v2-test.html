@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CAPGestion V2 - Test</title>
+    <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        pre {
+            background: #111827;
+            color: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <div class="topbar-logo">CAP<span>Gestion</span> V2</div>
+        <div class="topbar-right">
+            <span id="user-box" class="badge badge-bleu">Chargement...</span>
+            <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
+        </div>
+    </div>
+
+    <div class="page-content">
+        <div class="card">
+            <div class="card-title">Contrôle session</div>
+            <div class="row">
+                <button class="btn btn-primary" onclick="chargerSession()">Vérifier session</button>
+                <button class="btn" onclick="chargerDashboard()">Charger dashboard</button>
+                <button class="btn" onclick="chargerComptesClients()">Lister comptes clients</button>
+                <button class="btn" onclick="chargerUtilisateurs()">Lister gérants / utilisateurs</button>
+                <button class="btn" onclick="chargerEmployes()">Lister employés</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Créer un compte client</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Nom</label>
+                    <input id="cc-nom" class="form-input" placeholder="Nom du client" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Téléphone</label>
+                    <input id="cc-tel" class="form-input" placeholder="0700000000" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Observation</label>
+                <textarea id="cc-obs" class="form-input" placeholder="Observation"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Ajouter un mouvement sur un compte client</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">ID compte client</label>
+                    <input id="mvt-compte-id" class="form-input" placeholder="Ex: 1" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="mvt-type" class="form-input">
+                        <option value="credit">credit</option>
+                        <option value="remboursement">remboursement</option>
+                        <option value="avance">avance</option>
+                        <option value="ajustement_plus">ajustement_plus</option>
+                        <option value="ajustement_moins">ajustement_moins</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Montant</label>
+                    <input id="mvt-montant" class="form-input" placeholder="Ex: 5000" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mode paiement</label>
+                    <input id="mvt-mode" class="form-input" placeholder="Espèces / Wave / Orange..." />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Note</label>
+                <textarea id="mvt-note" class="form-input" placeholder="Motif du mouvement"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Résultat</div>
+            <pre id="output">Prêt.</pre>
+        </div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const userBox = document.getElementById('user-box');
+
+        function afficher(data) {
+            output.textContent = typeof data === 'string'
+                ? data
+                : JSON.stringify(data, null, 2);
+        }
+
+        async function api(url, options = {}) {
+            const config = {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                ...options
+            };
+
+            const res = await fetch(url, config);
+            const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON.' }));
+
+            if (!res.ok) {
+                throw data;
+            }
+
+            return data;
+        }
+
+        async function chargerSession() {
+            try {
+                const data = await api('/api/auth/moi');
+                userBox.textContent = `${data.utilisateur.nom} (${data.utilisateur.role})`;
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function chargerDashboard() {
+            try {
+                const data = await api('/api/dashboard');
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function chargerComptesClients() {
+            try {
+                const data = await api('/api/comptes-clients');
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function creerCompteClient() {
+            try {
+                const data = await api('/api/comptes-clients', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        nom: document.getElementById('cc-nom').value,
+                        telephone: document.getElementById('cc-tel').value,
+                        observation: document.getElementById('cc-obs').value
+                    })
+                });
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function ajouterMouvementCompte() {
+            try {
+                const compteId = document.getElementById('mvt-compte-id').value.trim();
+
+                const data = await api(`/api/comptes-clients/${compteId}/mouvements`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        type_mvt: document.getElementById('mvt-type').value,
+                        montant: document.getElementById('mvt-montant').value,
+                        mode_paiement: document.getElementById('mvt-mode').value,
+                        note: document.getElementById('mvt-note').value
+                    })
+                });
+
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function chargerUtilisateurs() {
+            try {
+                const data = await api('/api/utilisateurs');
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function chargerEmployes() {
+            try {
+                const data = await api('/api/employes');
+                afficher(data);
+            } catch (err) {
+                afficher(err);
+            }
+        }
+
+        async function logout() {
+            try {
+                await api('/api/auth/logout', { method: 'POST' });
+            } catch (_) { }
+            window.location.href = '/login.html';
+        }
+
+        chargerSession();
+    </script>
+</body>
+
+</html>

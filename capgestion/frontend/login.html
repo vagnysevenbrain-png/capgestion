@@ -32,14 +32,21 @@
       </button>
     </div>
 
-    <div class="login-footer">CAPGestion v1.0 — Tous droits réservés</div>
+    <div class="login-footer">CAPGestion v2 — Tous droits réservés</div>
   </div>
 
   <script>
-    // Si déjà connecté → rediriger
+    // Si déjà connecté → rediriger vers la page de test V2
     fetch('/api/auth/moi', { credentials: 'include' })
       .then(r => r.json())
-      .then(d => { if (d.connecte) window.location.href = '/app'; });
+      .then(d => {
+        if (d.connecte) {
+          window.location.href = '/v2-test.html';
+        }
+      })
+      .catch(() => {
+        // on ne fait rien si le serveur n'est pas joignable ici
+      });
 
     async function login() {
       const email = document.getElementById('email').value.trim();
@@ -48,6 +55,7 @@
       const btn = document.getElementById('btn-login');
 
       errDiv.style.display = 'none';
+
       if (!email || !password) {
         errDiv.textContent = 'Veuillez remplir tous les champs.';
         errDiv.style.display = 'block';
@@ -60,20 +68,25 @@
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, mot_de_passe: password })
+          body: JSON.stringify({
+            email,
+            mot_de_passe: password
+          })
         });
+
         const data = await res.json();
 
         if (res.ok) {
-          window.location.href = '/app.html';
+          window.location.href = '/v2-test.html';
         } else {
           errDiv.textContent = data.erreur || 'Erreur de connexion.';
           errDiv.style.display = 'block';
           btn.textContent = 'Se connecter';
           btn.disabled = false;
         }
-      } catch {
+      } catch (err) {
         errDiv.textContent = 'Impossible de contacter le serveur.';
         errDiv.style.display = 'block';
         btn.textContent = 'Se connecter';
@@ -81,7 +94,6 @@
       }
     }
 
-    // Connexion avec Entrée
     document.addEventListener('keydown', e => {
       if (e.key === 'Enter') login();
     });

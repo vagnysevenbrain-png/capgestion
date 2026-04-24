@@ -23,6 +23,24 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+
+        .dep-line {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .dep-line input {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .muted {
+            color: #6B7280;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -45,6 +63,132 @@
                 <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
                 <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
                 <button class="btn" onclick="testerEmployes()">Lister employés</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Rapport journalier</div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Date du rapport</label>
+                    <input id="r-date" type="date" class="form-input" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observation</label>
+                    <input id="r-observation" class="form-input" placeholder="Observation générale" />
+                </div>
+            </div>
+
+            <div class="section-label">Soldes Mobile Money / caisse</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Orange Revendeur</label>
+                    <input id="r-orange-rev" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Orange PDV</label>
+                    <input id="r-orange-pdv" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Wave</label>
+                    <input id="r-wave" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">MTN</label>
+                    <input id="r-mtn" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Moov</label>
+                    <input id="r-moov" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Moov P2</label>
+                    <input id="r-moov-p2" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Trésor</label>
+                    <input id="r-tresor" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Espèces</label>
+                    <input id="r-especes" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Unités</label>
+                    <input id="r-unites" class="form-input" placeholder="0" />
+                </div>
+            </div>
+
+            <div class="section-label">Gaz</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">B12 vendues</label>
+                    <input id="r-b12v" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B12 rechargées</label>
+                    <input id="r-b12r" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B12 fuites</label>
+                    <input id="r-b12f" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B6 vendues</label>
+                    <input id="r-b6v" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B6 rechargées</label>
+                    <input id="r-b6r" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">B6 fuites</label>
+                    <input id="r-b6f" class="form-input" placeholder="0" />
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Caisse gaz disponible</label>
+                    <input id="r-caisse-gaz-disponible" class="form-input" placeholder="Montant réel en caisse gaz" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Indication</label>
+                    <div class="form-input muted" style="min-height: 42px; display:flex; align-items:center;">
+                        Ce montant sera comparé à la caisse théorique gaz dans le dashboard.
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-label">Dépenses du jour</div>
+            <div class="dep-line">
+                <input id="dep-description" class="form-input" placeholder="Description dépense" />
+                <input id="dep-montant" class="form-input" placeholder="Montant" />
+                <button class="btn" onclick="ajouterDepense()">Ajouter dépense</button>
+            </div>
+            <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
+
+            <div class="actions" style="margin-top: 14px;">
+                <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
+                <button class="btn" onclick="reinitialiserRapport()">Réinitialiser le formulaire</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Historique des rapports</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Mois (YYYY-MM)</label>
+                    <input id="hist-mois" class="form-input" placeholder="2026-04" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Action</label>
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="chargerRapports()">Charger les rapports</button>
+                        <button class="btn" onclick="chargerRapportsDuMoisCourant()">Mois courant</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -267,7 +411,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Coût recharge B12</label>
-                    <input id="gaz-b12-recharge" class="form-input" placeholder="4850" />
+                    <input id="gaz-b12-recharge" class="form-input" placeholder="4950" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Coût recharge B6</label>
@@ -275,11 +419,6 @@
                 </div>
             </div>
             <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
-            <p style="margin-top:10px;">
-                La <strong>caisse gaz disponible</strong> n’est plus saisie ici.
-                Elle doit être renseignée dans le <strong>rapport journalier</strong> du gérant,
-                puis comparée à la <strong>caisse théorique gaz</strong> calculée automatiquement.
-            </p>
         </div>
 
         <div class="card">
@@ -293,10 +432,20 @@
         const etatSession = document.getElementById('etat-session');
         const selectClient = document.getElementById('mvt-compte-id');
 
+        let depensesRapport = [];
+
         function afficher(data) {
             sortie.textContent = typeof data === 'string'
                 ? data
                 : JSON.stringify(data, null, 2);
+        }
+
+        function valeurChamp(id) {
+            return document.getElementById(id).value;
+        }
+
+        function todayISO() {
+            return new Date().toISOString().slice(0, 10);
         }
 
         async function fetchJson(url, options = {}) {
@@ -317,6 +466,69 @@
             const { res, data } = await fetchJson(url, options);
             afficher(data);
             return { res, data };
+        }
+
+        function refreshDepensesRapportUI() {
+            const bloc = document.getElementById('depenses-liste');
+
+            if (!depensesRapport.length) {
+                bloc.innerHTML = '<span class="muted">Aucune dépense ajoutée.</span>';
+                return;
+            }
+
+            bloc.innerHTML = depensesRapport.map((dep, index) => `
+        <div class="dep-line">
+          <span><strong>${dep.description}</strong> - ${dep.montant}</span>
+          <button class="btn btn-sm btn-danger" onclick="supprimerDepense(${index})">Supprimer</button>
+        </div>
+      `).join('');
+        }
+
+        function ajouterDepense() {
+            const description = valeurChamp('dep-description').trim();
+            const montant = Number(valeurChamp('dep-montant'));
+
+            if (!description) {
+                afficher({ erreur: 'Description de dépense requise.' });
+                return;
+            }
+
+            if (!Number.isFinite(montant) || montant <= 0) {
+                afficher({ erreur: 'Montant de dépense invalide.' });
+                return;
+            }
+
+            depensesRapport.push({
+                description,
+                montant: Math.round(montant)
+            });
+
+            document.getElementById('dep-description').value = '';
+            document.getElementById('dep-montant').value = '';
+
+            refreshDepensesRapportUI();
+            afficher({ ok: true, depenses: depensesRapport });
+        }
+
+        function supprimerDepense(index) {
+            depensesRapport.splice(index, 1);
+            refreshDepensesRapportUI();
+            afficher({ ok: true, depenses: depensesRapport });
+        }
+
+        function reinitialiserRapport() {
+            document.getElementById('r-date').value = todayISO();
+            document.getElementById('r-observation').value = '';
+
+            [
+                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov',
+                'r-moov-p2', 'r-tresor', 'r-especes', 'r-unites',
+                'r-b12v', 'r-b12r', 'r-b12f', 'r-b6v', 'r-b6r', 'r-b6f',
+                'r-caisse-gaz-disponible'
+            ].forEach(id => document.getElementById(id).value = '');
+
+            depensesRapport = [];
+            refreshDepensesRapportUI();
         }
 
         async function chargerListeClientsDansSelect() {
@@ -360,7 +572,7 @@
             document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
             document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
             document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
-            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4850;
+            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
             document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
@@ -379,6 +591,52 @@
             if (res.ok) {
                 remplirFormulaireFond(data);
             }
+        }
+
+        async function chargerRapports() {
+            const mois = valeurChamp('hist-mois').trim();
+            const url = mois ? `/api/rapports?mois=${encodeURIComponent(mois)}` : '/api/rapports';
+            await api(url);
+        }
+
+        function chargerRapportsDuMoisCourant() {
+            const d = new Date();
+            const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('hist-mois').value = mois;
+            chargerRapports();
+        }
+
+        async function enregistrerRapport() {
+            const payload = {
+                date_rapport: valeurChamp('r-date'),
+                observation: valeurChamp('r-observation'),
+                soldes: {
+                    orange_rev: valeurChamp('r-orange-rev'),
+                    orange_pdv: valeurChamp('r-orange-pdv'),
+                    wave: valeurChamp('r-wave'),
+                    mtn: valeurChamp('r-mtn'),
+                    moov: valeurChamp('r-moov'),
+                    moov_p2: valeurChamp('r-moov-p2'),
+                    tresor: valeurChamp('r-tresor'),
+                    especes: valeurChamp('r-especes'),
+                    unites: valeurChamp('r-unites')
+                },
+                gaz: {
+                    b12v: valeurChamp('r-b12v'),
+                    b12r: valeurChamp('r-b12r'),
+                    b12f: valeurChamp('r-b12f'),
+                    b6v: valeurChamp('r-b6v'),
+                    b6r: valeurChamp('r-b6r'),
+                    b6f: valeurChamp('r-b6f'),
+                    caisse_gaz_disponible: valeurChamp('r-caisse-gaz-disponible')
+                },
+                depenses: depensesRapport
+            };
+
+            await api('/api/rapports', {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
         }
 
         async function testerComptesClients() {
@@ -513,6 +771,8 @@
             window.location.href = '/entree-v2.html';
         }
 
+        document.getElementById('r-date').value = todayISO();
+        refreshDepensesRapportUI();
         chargerListeClientsDansSelect();
         chargerEtatFond();
     </script>

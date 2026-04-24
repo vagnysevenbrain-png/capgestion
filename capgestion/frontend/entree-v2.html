@@ -10,7 +10,14 @@
 
 <body class="login-page">
     <div class="login-wrap">
-        <div class="login-logo">CAP<span>Gestion</span> V2</div>
+        <div class="login-brand">
+            <img src="/assets/logo-capgestion-v2.png" alt="Cap Gestion V2" />
+            <div class="login-title">
+                <div class="brand-wordmark">CAP GESTION<span>V2</span></div>
+                <div class="brand-subline">Pilotage magasin · Mobile money · Gaz</div>
+            </div>
+        </div>
+
         <div class="login-subtitle">Connexion de test sans redirection automatique</div>
 
         <div class="login-card">
@@ -27,14 +34,14 @@
                 <input type="password" id="password" class="form-input" placeholder="••••••••" />
             </div>
 
-            <div class="row" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="actions">
                 <button class="btn btn-primary" onclick="login()" id="btn-login">Se connecter</button>
                 <button class="btn" onclick="testerSession()">Tester session</button>
                 <button class="btn" onclick="allerControle()">Ouvrir contrôle V2</button>
             </div>
         </div>
 
-        <div class="login-footer">CAPGestion V2</div>
+        <div class="login-footer">CAP GESTION V2</div>
     </div>
 
     <script>

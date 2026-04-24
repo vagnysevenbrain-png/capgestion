@@ -8,96 +8,29 @@
     <link rel="stylesheet" href="/css/main.css" />
     <style>
         pre {
-            background: #111827;
-            color: #f9fafb;
+            background: #F7FAFC;
+            color: #2F3A44;
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: auto;
             white-space: pre-wrap;
             word-break: break-word;
             font-size: 12px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .dep-line {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 8px;
-            flex-wrap: wrap;
-        }
-
-        .dep-line input {
-            flex: 1;
-            min-width: 180px;
-        }
-
-        .muted {
-            color: #6B7280;
-            font-size: 12px;
-        }
-
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .dash-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 14px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        }
-
-        .dash-label {
-            font-size: 12px;
-            color: #6b7280;
-            margin-bottom: 6px;
-        }
-
-        .dash-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .dash-sub {
-            margin-top: 6px;
-            font-size: 12px;
-            color: #6b7280;
-        }
-
-        .dash-good .dash-value {
-            color: #047857;
-        }
-
-        .dash-bad .dash-value {
-            color: #b91c1c;
-        }
-
-        .dash-warn .dash-value {
-            color: #b45309;
-        }
-
-        .section-label {
-            font-weight: 600;
-            margin: 8px 0 12px;
-            color: #111827;
+            border: 1px solid #DCE4EC;
         }
     </style>
 </head>
 
 <body>
     <div class="topbar">
-        <div class="topbar-logo">CAP<span>Gestion</span> Contrôle V2B</div>
+        <div class="brand-lockup">
+            <img src="/assets/logo-capgestion-v2.png" alt="Cap Gestion V2" class="brand-mark" />
+            <div class="brand-text">
+                <div class="brand-wordmark">CAP GESTION<span>V2</span></div>
+                <div class="brand-subline">Pilotage magasin · Mobile money · Gaz</div>
+            </div>
+        </div>
+
         <div class="topbar-right">
             <span id="etat-session" class="badge badge-bleu">Non testé</span>
             <button class="btn btn-danger btn-sm" onclick="logout()">Déconnexion</button>
@@ -191,70 +124,40 @@
 
             <div class="section-label">Soldes Mobile Money / caisse</div>
             <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Orange Revendeur</label>
-                    <input id="r-orange-rev" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Orange PDV</label>
-                    <input id="r-orange-pdv" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Wave</label>
-                    <input id="r-wave" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">MTN</label>
-                    <input id="r-mtn" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Moov</label>
-                    <input id="r-moov" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Moov P2</label>
-                    <input id="r-moov-p2" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Trésor</label>
-                    <input id="r-tresor" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Espèces</label>
-                    <input id="r-especes" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Unités</label>
-                    <input id="r-unites" class="form-input" placeholder="0" />
-                </div>
+                <div class="form-group"><label class="form-label">Orange Revendeur</label><input id="r-orange-rev"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Wave</label><input id="r-wave" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Moov</label><input id="r-moov" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Unités</label><input id="r-unites" class="form-input"
+                        placeholder="0" /></div>
             </div>
 
             <div class="section-label">Gaz</div>
             <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">B12 vendues</label>
-                    <input id="r-b12v" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B12 rechargées</label>
-                    <input id="r-b12r" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B12 fuites</label>
-                    <input id="r-b12f" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B6 vendues</label>
-                    <input id="r-b6v" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B6 rechargées</label>
-                    <input id="r-b6r" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B6 fuites</label>
-                    <input id="r-b6f" class="form-input" placeholder="0" />
-                </div>
+                <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f" class="form-input"
+                        placeholder="0" /></div>
             </div>
 
             <div class="grid-2">
@@ -304,14 +207,10 @@
         <div class="card">
             <div class="card-title">Créer un compte client</div>
             <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Nom</label>
-                    <input id="cc-nom" class="form-input" placeholder="Nom du client" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Téléphone</label>
-                    <input id="cc-tel" class="form-input" placeholder="0700000000" />
-                </div>
+                <div class="form-group"><label class="form-label">Nom</label><input id="cc-nom" class="form-input"
+                        placeholder="Nom du client" /></div>
+                <div class="form-group"><label class="form-label">Téléphone</label><input id="cc-tel" class="form-input"
+                        placeholder="0700000000" /></div>
             </div>
             <div class="form-group">
                 <label class="form-label">Observation</label>
@@ -367,18 +266,12 @@
         <div class="card">
             <div class="card-title">Créer un employé</div>
             <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Nom</label>
-                    <input id="emp-nom" class="form-input" placeholder="Nom employé" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Poste</label>
-                    <input id="emp-poste" class="form-input" placeholder="Gérant / Caissier..." />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Salaire de base</label>
-                    <input id="emp-salaire" class="form-input" placeholder="Ex: 150000" />
-                </div>
+                <div class="form-group"><label class="form-label">Nom</label><input id="emp-nom" class="form-input"
+                        placeholder="Nom employé" /></div>
+                <div class="form-group"><label class="form-label">Poste</label><input id="emp-poste" class="form-input"
+                        placeholder="Gérant / Caissier..." /></div>
+                <div class="form-group"><label class="form-label">Salaire de base</label><input id="emp-salaire"
+                        class="form-input" placeholder="Ex: 150000" /></div>
             </div>
             <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
         </div>
@@ -386,21 +279,15 @@
         <div class="card">
             <div class="card-title">Créer un utilisateur / gérant</div>
             <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Nom</label>
-                    <input id="usr-nom" class="form-input" placeholder="Nom utilisateur" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input id="usr-email" class="form-input" placeholder="email@exemple.com" />
-                </div>
+                <div class="form-group"><label class="form-label">Nom</label><input id="usr-nom" class="form-input"
+                        placeholder="Nom utilisateur" /></div>
+                <div class="form-group"><label class="form-label">Email</label><input id="usr-email" class="form-input"
+                        placeholder="email@exemple.com" /></div>
             </div>
 
             <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Mot de passe</label>
-                    <input id="usr-password" type="password" class="form-input" placeholder="Minimum 6 caractères" />
-                </div>
+                <div class="form-group"><label class="form-label">Mot de passe</label><input id="usr-password"
+                        type="password" class="form-input" placeholder="Minimum 6 caractères" /></div>
                 <div class="form-group">
                     <label class="form-label">Rôle</label>
                     <select id="usr-role" class="form-input">
@@ -428,14 +315,10 @@
                         <option value="retrait">retrait</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Montant</label>
-                    <input id="fmd-montant" class="form-input" placeholder="Ex: 200000" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Motif</label>
-                    <input id="fmd-motif" class="form-input" placeholder="Motif" />
-                </div>
+                <div class="form-group"><label class="form-label">Montant</label><input id="fmd-montant"
+                        class="form-input" placeholder="Ex: 200000" /></div>
+                <div class="form-group"><label class="form-label">Motif</label><input id="fmd-motif" class="form-input"
+                        placeholder="Motif" /></div>
             </div>
             <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement fond</button>
         </div>
@@ -443,42 +326,24 @@
         <div class="card">
             <div class="card-title">Mise à jour des fonds MM</div>
             <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Orange Revendeur</label>
-                    <input id="mm-orange-rev" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Orange PDV</label>
-                    <input id="mm-orange-pdv" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Wave</label>
-                    <input id="mm-wave" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">MTN</label>
-                    <input id="mm-mtn" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Moov</label>
-                    <input id="mm-moov" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Moov P2</label>
-                    <input id="mm-moov-p2" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Trésor</label>
-                    <input id="mm-tresor" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Unités</label>
-                    <input id="mm-unites" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Espèces</label>
-                    <input id="mm-especes" class="form-input" placeholder="0" />
-                </div>
+                <div class="form-group"><label class="form-label">Orange Revendeur</label><input id="mm-orange-rev"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Orange PDV</label><input id="mm-orange-pdv"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Wave</label><input id="mm-wave" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">MTN</label><input id="mm-mtn" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Moov</label><input id="mm-moov" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Moov P2</label><input id="mm-moov-p2"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Trésor</label><input id="mm-tresor" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Unités</label><input id="mm-unites" class="form-input"
+                        placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Espèces</label><input id="mm-especes"
+                        class="form-input" placeholder="0" /></div>
             </div>
             <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds MM</button>
         </div>
@@ -486,46 +351,26 @@
         <div class="card">
             <div class="card-title">Paramètres et stock gaz</div>
             <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">B12 pleines</label>
-                    <input id="gaz-b12-pleines" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B12 vides</label>
-                    <input id="gaz-b12-vides" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B6 pleines</label>
-                    <input id="gaz-b6-pleines" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">B6 vides</label>
-                    <input id="gaz-b6-vides" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission B12</label>
-                    <input id="gaz-b12-commission" class="form-input" placeholder="450" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission B6</label>
-                    <input id="gaz-b6-commission" class="form-input" placeholder="350" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Prix vente B12</label>
-                    <input id="gaz-b12-prix" class="form-input" placeholder="4950" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Prix vente B6</label>
-                    <input id="gaz-b6-prix" class="form-input" placeholder="1850" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Coût recharge B12</label>
-                    <input id="gaz-b12-recharge" class="form-input" placeholder="4950" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Coût recharge B6</label>
-                    <input id="gaz-b6-recharge" class="form-input" placeholder="1850" />
-                </div>
+                <div class="form-group"><label class="form-label">B12 pleines</label><input id="gaz-b12-pleines"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B12 vides</label><input id="gaz-b12-vides"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B6 pleines</label><input id="gaz-b6-pleines"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">B6 vides</label><input id="gaz-b6-vides"
+                        class="form-input" placeholder="0" /></div>
+                <div class="form-group"><label class="form-label">Commission B12</label><input id="gaz-b12-commission"
+                        class="form-input" placeholder="450" /></div>
+                <div class="form-group"><label class="form-label">Commission B6</label><input id="gaz-b6-commission"
+                        class="form-input" placeholder="350" /></div>
+                <div class="form-group"><label class="form-label">Prix vente B12</label><input id="gaz-b12-prix"
+                        class="form-input" placeholder="4950" /></div>
+                <div class="form-group"><label class="form-label">Prix vente B6</label><input id="gaz-b6-prix"
+                        class="form-input" placeholder="1850" /></div>
+                <div class="form-group"><label class="form-label">Coût recharge B12</label><input id="gaz-b12-recharge"
+                        class="form-input" placeholder="4950" /></div>
+                <div class="form-group"><label class="form-label">Coût recharge B6</label><input id="gaz-b6-recharge"
+                        class="form-input" placeholder="1850" /></div>
             </div>
             <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
         </div>
@@ -540,13 +385,10 @@
         const sortie = document.getElementById('sortie');
         const etatSession = document.getElementById('etat-session');
         const selectClient = document.getElementById('mvt-compte-id');
-
         let depensesRapport = [];
 
         function afficher(data) {
-            sortie.textContent = typeof data === 'string'
-                ? data
-                : JSON.stringify(data, null, 2);
+            sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         }
 
         function fcfa(value) {
@@ -568,21 +410,15 @@
 
             document.getElementById('dash-fonds').textContent = fcfa(fonds.fonds_disponibles);
             document.getElementById('dash-source-fonds').textContent = `Source : ${fonds.source || '-'}`;
-
             document.getElementById('dash-treso').textContent = fcfa(treso.tresorerie_corrigee);
-
             document.getElementById('dash-perte').textContent = fcfa(treso.perte_ou_excedent);
             document.getElementById('dash-fond-mis').textContent = `Fond mis à disposition : ${fcfa(treso.fond_mis_a_disposition)}`;
-
             document.getElementById('dash-caisse-theorique').textContent = fcfa(gaz.caisse_theorique_gaz);
             document.getElementById('dash-bouteilles-vides').textContent = `B12 vides : ${gaz.b12_vides || 0} | B6 vides : ${gaz.b6_vides || 0}`;
-
             document.getElementById('dash-caisse-dispo').textContent = fcfa(activite.caisse_gaz_disponible);
             document.getElementById('dash-ecart-gaz').textContent = fcfa(activite.ecart_caisse_gaz);
-
             document.getElementById('dash-commission').textContent = fcfa(activite.commission_gaz_jour);
             document.getElementById('dash-ventes-jour').textContent = `Ventes du jour : ${fcfa(activite.ventes_gaz_jour)}`;
-
             document.getElementById('dash-comptes-clients').textContent = fcfa(comptes.solde_net_comptes_clients);
             document.getElementById('dash-comptes-stats').textContent = `Actifs : ${comptes.comptes_actifs || 0} | Inactifs : ${comptes.comptes_inactifs || 0}`;
 
@@ -695,14 +531,9 @@
                 return;
             }
 
-            depensesRapport.push({
-                description,
-                montant: Math.round(montant)
-            });
-
+            depensesRapport.push({ description, montant: Math.round(montant) });
             document.getElementById('dep-description').value = '';
             document.getElementById('dep-montant').value = '';
-
             refreshDepensesRapportUI();
             afficher({ ok: true, depenses: depensesRapport });
         }
@@ -716,12 +547,10 @@
         function reinitialiserRapport() {
             document.getElementById('r-date').value = todayISO();
             document.getElementById('r-observation').value = '';
-
             [
-                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov',
-                'r-moov-p2', 'r-tresor', 'r-especes', 'r-unites',
-                'r-b12v', 'r-b12r', 'r-b12f', 'r-b6v', 'r-b6r', 'r-b6f',
-                'r-caisse-gaz-disponible'
+                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
+                'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
+                'r-b6v', 'r-b6r', 'r-b6f', 'r-caisse-gaz-disponible'
             ].forEach(id => document.getElementById(id).value = '');
 
             depensesRapport = [];
@@ -819,7 +648,6 @@
 
         async function ajouterMouvementCompte() {
             const compteId = document.getElementById('mvt-compte-id').value.trim();
-
             if (!compteId) {
                 afficher({ erreur: 'Veuillez choisir un client.' });
                 return;

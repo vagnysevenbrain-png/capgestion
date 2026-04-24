@@ -63,6 +63,57 @@ function verifierDroitModification(rapport, session) {
   };
 }
 
+function isTodayString(dateValue) {
+  const today = new Date().toISOString().slice(0, 10);
+  const d = new Date(dateValue).toISOString().slice(0, 10);
+  return d === today;
+}
+
+async function syncFondMmFromSoldes(client, siteId, soldes) {
+  const orange_rev = toPositiveInt(soldes?.orange_rev);
+  const orange_pdv = toPositiveInt(soldes?.orange_pdv);
+  const wave = toPositiveInt(soldes?.wave);
+  const mtn = toPositiveInt(soldes?.mtn);
+  const moov = toPositiveInt(soldes?.moov);
+  const moov_p2 = toPositiveInt(soldes?.moov_p2);
+  const tresor = toPositiveInt(soldes?.tresor);
+  const especes = toPositiveInt(soldes?.especes);
+  const unites = toPositiveInt(soldes?.unites);
+  const orange_total = orange_rev + orange_pdv;
+
+  await client.query(
+    `
+    UPDATE fond_mm
+    SET
+      orange_rev = $1,
+      orange_pdv = $2,
+      orange_total = $3,
+      wave = $4,
+      mtn = $5,
+      moov = $6,
+      moov_p2 = $7,
+      tresor = $8,
+      especes = $9,
+      unites = $10,
+      mis_a_jour = NOW()
+    WHERE site_id = $11
+    `,
+    [
+      orange_rev,
+      orange_pdv,
+      orange_total,
+      wave,
+      mtn,
+      moov,
+      moov_p2,
+      tresor,
+      especes,
+      unites,
+      siteId
+    ]
+  );
+}
+
 /**
  * POST /api/rapports
  * Créer un rapport journalier
@@ -92,6 +143,18 @@ router.post('/', requireAuth, async (req, res) => {
 
     const rapportId = rRes.rows[0].id;
 
+    const soldesPayload = {
+      orange_rev: toPositiveInt(soldes.orange_rev),
+      orange_pdv: toPositiveInt(soldes.orange_pdv),
+      wave: toPositiveInt(soldes.wave),
+      mtn: toPositiveInt(soldes.mtn),
+      moov: toPositiveInt(soldes.moov),
+      moov_p2: toPositiveInt(soldes.moov_p2),
+      tresor: toPositiveInt(soldes.tresor),
+      especes: toPositiveInt(soldes.especes),
+      unites: toPositiveInt(soldes.unites)
+    };
+
     await client.query(
       `
       INSERT INTO rapport_soldes
@@ -100,15 +163,15 @@ router.post('/', requireAuth, async (req, res) => {
       `,
       [
         rapportId,
-        toPositiveInt(soldes.orange_rev),
-        toPositiveInt(soldes.orange_pdv),
-        toPositiveInt(soldes.wave),
-        toPositiveInt(soldes.mtn),
-        toPositiveInt(soldes.moov),
-        toPositiveInt(soldes.moov_p2),
-        toPositiveInt(soldes.tresor),
-        toPositiveInt(soldes.especes),
-        toPositiveInt(soldes.unites)
+        soldesPayload.orange_rev,
+        soldesPayload.orange_pdv,
+        soldesPayload.wave,
+        soldesPayload.mtn,
+        soldesPayload.moov,
+        soldesPayload.moov_p2,
+        soldesPayload.tresor,
+        soldesPayload.especes,
+        soldesPayload.unites
       ]
     );
 
@@ -155,7 +218,6 @@ router.post('/', requireAuth, async (req, res) => {
       }
     }
 
-    // Mise à jour stock gaz
     await client.query(
       `
       UPDATE gaz_config SET
@@ -178,6 +240,11 @@ router.post('/', requireAuth, async (req, res) => {
         siteId
       ]
     );
+
+    // Synchronise fond_mm seulement si le rapport créé est celui du jour
+    if (isTodayString(date_rapport)) {
+      await syncFondMmFromSoldes(client, siteId, soldesPayload);
+    }
 
     await client.query('COMMIT');
     res.status(201).json({ ok: true, rapport_id: rapportId });
@@ -375,6 +442,18 @@ router.put('/:id', requireAuth, async (req, res) => {
     const deltaB6v = newB6v - Number(oldGaz.b6_vendues || 0);
     const deltaB6f = newB6f - Number(oldGaz.b6_fuites || 0);
 
+    const soldesPayload = {
+      orange_rev: toPositiveInt(soldes?.orange_rev),
+      orange_pdv: toPositiveInt(soldes?.orange_pdv),
+      wave: toPositiveInt(soldes?.wave),
+      mtn: toPositiveInt(soldes?.mtn),
+      moov: toPositiveInt(soldes?.moov),
+      moov_p2: toPositiveInt(soldes?.moov_p2),
+      tresor: toPositiveInt(soldes?.tresor),
+      especes: toPositiveInt(soldes?.especes),
+      unites: toPositiveInt(soldes?.unites)
+    };
+
     await client.query('BEGIN');
 
     await client.query(
@@ -403,15 +482,15 @@ router.put('/:id', requireAuth, async (req, res) => {
       WHERE rapport_id = $10
       `,
       [
-        toPositiveInt(soldes?.orange_rev),
-        toPositiveInt(soldes?.orange_pdv),
-        toPositiveInt(soldes?.wave),
-        toPositiveInt(soldes?.mtn),
-        toPositiveInt(soldes?.moov),
-        toPositiveInt(soldes?.moov_p2),
-        toPositiveInt(soldes?.tresor),
-        toPositiveInt(soldes?.especes),
-        toPositiveInt(soldes?.unites),
+        soldesPayload.orange_rev,
+        soldesPayload.orange_pdv,
+        soldesPayload.wave,
+        soldesPayload.mtn,
+        soldesPayload.moov,
+        soldesPayload.moov_p2,
+        soldesPayload.tresor,
+        soldesPayload.especes,
+        soldesPayload.unites,
         id
       ]
     );
@@ -451,7 +530,6 @@ router.put('/:id', requireAuth, async (req, res) => {
       }
     }
 
-    // Réajustement du stock gaz par différence ancien -> nouveau
     await client.query(
       `
       UPDATE gaz_config SET
@@ -474,6 +552,11 @@ router.put('/:id', requireAuth, async (req, res) => {
         siteId
       ]
     );
+
+    // Synchronise fond_mm seulement si le rapport modifié est celui du jour
+    if (isTodayString(rapport.date_rapport)) {
+      await syncFondMmFromSoldes(client, siteId, soldesPayload);
+    }
 
     await client.query(
       `

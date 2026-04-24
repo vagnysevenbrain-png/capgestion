@@ -17,6 +17,12 @@
             word-break: break-word;
             font-size: 12px;
         }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
     </style>
 </head>
 
@@ -32,13 +38,124 @@
     <div class="page-content">
         <div class="card">
             <div class="card-title">Tests API</div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div class="actions">
                 <button class="btn btn-primary" onclick="testerSession()">Tester la session</button>
                 <button class="btn" onclick="testerDashboard()">Tester le dashboard</button>
                 <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
                 <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
                 <button class="btn" onclick="testerEmployes()">Lister employés</button>
             </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Créer un compte client</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Nom</label>
+                    <input id="cc-nom" class="form-input" placeholder="Nom du client" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Téléphone</label>
+                    <input id="cc-tel" class="form-input" placeholder="0700000000" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Observation</label>
+                <textarea id="cc-obs" class="form-input" placeholder="Observation"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Ajouter un mouvement sur un compte client</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">ID compte client</label>
+                    <input id="mvt-compte-id" class="form-input" placeholder="Ex: 1" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Type</label>
+                    <select id="mvt-type" class="form-input">
+                        <option value="credit">credit</option>
+                        <option value="remboursement">remboursement</option>
+                        <option value="avance">avance</option>
+                        <option value="ajustement_plus">ajustement_plus</option>
+                        <option value="ajustement_moins">ajustement_moins</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Montant</label>
+                    <input id="mvt-montant" class="form-input" placeholder="Ex: 5000" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mode paiement</label>
+                    <input id="mvt-mode" class="form-input" placeholder="Espèces / Wave / Orange..." />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Note</label>
+                <textarea id="mvt-note" class="form-input" placeholder="Motif du mouvement"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Créer un employé</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Nom</label>
+                    <input id="emp-nom" class="form-input" placeholder="Nom employé" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Poste</label>
+                    <input id="emp-poste" class="form-input" placeholder="Gérant / Caissier..." />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Salaire de base</label>
+                    <input id="emp-salaire" class="form-input" placeholder="Ex: 150000" />
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Créer un utilisateur / gérant</div>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Nom</label>
+                    <input id="usr-nom" class="form-input" placeholder="Nom utilisateur" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input id="usr-email" class="form-input" placeholder="email@exemple.com" />
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label class="form-label">Mot de passe</label>
+                    <input id="usr-password" type="password" class="form-input" placeholder="Minimum 6 caractères" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rôle</label>
+                    <select id="usr-role" class="form-input">
+                        <option value="gerant">gerant</option>
+                        <option value="proprietaire">proprietaire</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">ID employé lié (facultatif)</label>
+                <input id="usr-employe-id" class="form-input" placeholder="Ex: 1" />
+            </div>
+
+            <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l’utilisateur</button>
         </div>
 
         <div class="card">
@@ -90,12 +207,68 @@
             await api('/api/comptes-clients');
         }
 
+        async function creerCompteClient() {
+            await api('/api/comptes-clients', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nom: document.getElementById('cc-nom').value,
+                    telephone: document.getElementById('cc-tel').value,
+                    observation: document.getElementById('cc-obs').value
+                })
+            });
+        }
+
+        async function ajouterMouvementCompte() {
+            const compteId = document.getElementById('mvt-compte-id').value.trim();
+
+            if (!compteId) {
+                afficher({ erreur: 'ID compte client requis.' });
+                return;
+            }
+
+            await api(`/api/comptes-clients/${compteId}/mouvements`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    type_mvt: document.getElementById('mvt-type').value,
+                    montant: document.getElementById('mvt-montant').value,
+                    mode_paiement: document.getElementById('mvt-mode').value,
+                    note: document.getElementById('mvt-note').value
+                })
+            });
+        }
+
         async function testerUtilisateurs() {
             await api('/api/utilisateurs');
         }
 
+        async function creerUtilisateur() {
+            const employeId = document.getElementById('usr-employe-id').value.trim();
+
+            await api('/api/utilisateurs', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nom: document.getElementById('usr-nom').value,
+                    email: document.getElementById('usr-email').value,
+                    mot_de_passe: document.getElementById('usr-password').value,
+                    role: document.getElementById('usr-role').value,
+                    employe_id: employeId ? Number(employeId) : null
+                })
+            });
+        }
+
         async function testerEmployes() {
             await api('/api/employes');
+        }
+
+        async function creerEmploye() {
+            await api('/api/employes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nom: document.getElementById('emp-nom').value,
+                    poste: document.getElementById('emp-poste').value,
+                    salaire_base: document.getElementById('emp-salaire').value
+                })
+            });
         }
 
         async function logout() {

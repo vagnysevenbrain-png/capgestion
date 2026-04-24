@@ -4,6 +4,25 @@ const { requireAuth, requireProprietaire } = require('../middleware/auth');
 
 const router = express.Router();
 
+function toPositiveInt(value, defaultValue = 0) {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) return defaultValue;
+    return Math.round(n);
+}
+
+/**
+ * GET /api/comptes-clients/test-auth
+ * Vérification simple de la session sur ce module
+ */
+router.get('/test-auth', requireAuth, async (req, res) => {
+    res.json({
+        ok: true,
+        userId: req.session.userId,
+        siteId: req.session.siteId,
+        role: req.session.role
+    });
+});
+
 /**
  * GET /api/comptes-clients
  * Liste des comptes clients
@@ -18,33 +37,46 @@ router.get('/', requireAuth, async (req, res) => {
     try {
         let query = `
       SELECT
-        id,
-        site_id,
-        nom,
-        telephone,
-        actif,
-        deleted_at,
-        solde_compte
-      FROM v_comptes_clients_soldes
-      WHERE site_id = $1
-        AND deleted_at IS NULL
+        cc.id,
+        cc.site_id,
+        cc.nom,
+        cc.telephone,
+        cc.observation,
+        cc.actif,
+        cc.deleted_at,
+        cc.created_at,
+        cc.updated_at,
+        COALESCE((
+          SELECT SUM(
+            CASE
+              WHEN m.type_mvt IN ('credit', 'ajustement_plus') THEN m.montant
+              WHEN m.type_mvt IN ('remboursement', 'avance', 'ajustement_moins') THEN -m.montant
+              ELSE 0
+            END
+          )
+          FROM compte_client_mouvements m
+          WHERE m.compte_client_id = cc.id
+        ), 0) AS solde_compte
+      FROM comptes_clients cc
+      WHERE cc.site_id = $1
+        AND cc.deleted_at IS NULL
     `;
         const params = [siteId];
 
         if (actif === 'true') {
             params.push(true);
-            query += ` AND actif = $${params.length}`;
+            query += ` AND cc.actif = $${params.length}`;
         } else if (actif === 'false') {
             params.push(false);
-            query += ` AND actif = $${params.length}`;
+            query += ` AND cc.actif = $${params.length}`;
         }
 
         if (q && q.trim()) {
             params.push(`%${q.trim().toLowerCase()}%`);
-            query += ` AND LOWER(nom) LIKE $${params.length}`;
+            query += ` AND LOWER(cc.nom) LIKE $${params.length}`;
         }
 
-        query += ` ORDER BY nom ASC`;
+        query += ` ORDER BY cc.nom ASC`;
 
         const result = await db.query(query, params);
         res.json(result.rows);
@@ -66,17 +98,30 @@ router.get('/:id', requireAuth, async (req, res) => {
         const compteRes = await db.query(
             `
       SELECT
-        id,
-        site_id,
-        nom,
-        telephone,
-        actif,
-        deleted_at,
-        solde_compte
-      FROM v_comptes_clients_soldes
-      WHERE id = $1
-        AND site_id = $2
-        AND deleted_at IS NULL
+        cc.id,
+        cc.site_id,
+        cc.nom,
+        cc.telephone,
+        cc.observation,
+        cc.actif,
+        cc.deleted_at,
+        cc.created_at,
+        cc.updated_at,
+        COALESCE((
+          SELECT SUM(
+            CASE
+              WHEN m.type_mvt IN ('credit', 'ajustement_plus') THEN m.montant
+              WHEN m.type_mvt IN ('remboursement', 'avance', 'ajustement_moins') THEN -m.montant
+              ELSE 0
+            END
+          )
+          FROM compte_client_mouvements m
+          WHERE m.compte_client_id = cc.id
+        ), 0) AS solde_compte
+      FROM comptes_clients cc
+      WHERE cc.id = $1
+        AND cc.site_id = $2
+        AND cc.deleted_at IS NULL
       `,
             [id, siteId]
         );
@@ -89,6 +134,7 @@ router.get('/:id', requireAuth, async (req, res) => {
             `
       SELECT
         id,
+        compte_client_id,
         date_mouvement,
         type_mvt,
         montant,
@@ -137,7 +183,15 @@ router.post('/', requireAuth, async (req, res) => {
         created_by
       )
       VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, nom, telephone, actif, created_at
+      RETURNING
+        id,
+        site_id,
+        nom,
+        telephone,
+        observation,
+        actif,
+        created_at,
+        updated_at
       `,
             [
                 siteId,
@@ -176,13 +230,12 @@ router.post('/:id/mouvements', requireAuth, async (req, res) => {
         'ajustement_moins'
     ];
 
-    const montantNum = Number(montant);
-
     if (!typesAutorises.includes(type_mvt)) {
         return res.status(400).json({ erreur: 'Type de mouvement invalide.' });
     }
 
-    if (!Number.isFinite(montantNum) || montantNum <= 0) {
+    const montantNum = toPositiveInt(montant, 0);
+    if (montantNum <= 0) {
         return res.status(400).json({ erreur: 'Montant invalide.' });
     }
 
@@ -191,7 +244,8 @@ router.post('/:id/mouvements', requireAuth, async (req, res) => {
             `
       SELECT id, actif, deleted_at
       FROM comptes_clients
-      WHERE id = $1 AND site_id = $2
+      WHERE id = $1
+        AND site_id = $2
       `,
             [id, siteId]
         );
@@ -222,13 +276,22 @@ router.post('/:id/mouvements', requireAuth, async (req, res) => {
         cree_par
       )
       VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7)
-      RETURNING id, date_mouvement, type_mvt, montant, mode_paiement, note, created_at
+      RETURNING
+        id,
+        compte_client_id,
+        date_mouvement,
+        type_mvt,
+        montant,
+        mode_paiement,
+        note,
+        cree_par,
+        created_at
       `,
             [
                 id,
                 date_mouvement || null,
                 type_mvt,
-                Math.round(montantNum),
+                montantNum,
                 mode_paiement?.trim() || null,
                 note?.trim() || null,
                 userId
@@ -263,11 +326,12 @@ router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) =
         const result = await db.query(
             `
       UPDATE comptes_clients
-      SET actif = $1, updated_at = NOW()
+      SET actif = $1,
+          updated_at = NOW()
       WHERE id = $2
         AND site_id = $3
         AND deleted_at IS NULL
-      RETURNING id, nom, actif
+      RETURNING id, nom, actif, updated_at
       `,
             [actif, id, siteId]
         );
@@ -299,7 +363,9 @@ router.delete('/:id', requireAuth, requireProprietaire, async (req, res) => {
         const result = await db.query(
             `
       UPDATE comptes_clients
-      SET deleted_at = NOW(), actif = FALSE, updated_at = NOW()
+      SET deleted_at = NOW(),
+          actif = FALSE,
+          updated_at = NOW()
       WHERE id = $1
         AND site_id = $2
         AND deleted_at IS NULL

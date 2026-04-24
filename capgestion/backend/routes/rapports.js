@@ -115,8 +115,17 @@ router.post('/', requireAuth, async (req, res) => {
     await client.query(
       `
       INSERT INTO rapport_gaz
-        (rapport_id, b12_vendues, b12_rechargees, b12_fuites, b6_vendues, b6_rechargees, b6_fuites)
-      VALUES ($1,$2,$3,$4,$5,$6,$7)
+        (
+          rapport_id,
+          b12_vendues,
+          b12_rechargees,
+          b12_fuites,
+          b6_vendues,
+          b6_rechargees,
+          b6_fuites,
+          caisse_gaz_disponible
+        )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
       `,
       [
         rapportId,
@@ -125,7 +134,8 @@ router.post('/', requireAuth, async (req, res) => {
         toPositiveInt(gaz.b12f),
         toPositiveInt(gaz.b6v),
         toPositiveInt(gaz.b6r),
-        toPositiveInt(gaz.b6f)
+        toPositiveInt(gaz.b6f),
+        toPositiveInt(gaz.caisse_gaz_disponible ?? gaz.caisse_disponible)
       ]
     );
 
@@ -205,11 +215,12 @@ router.get('/', requireAuth, async (req, res) => {
         s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov,
         s.moov_p2, s.tresor, s.especes, s.unites,
         g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites
+        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites,
+        g.caisse_gaz_disponible
       FROM rapports r
-      JOIN utilisateurs u       ON r.gerant_id  = u.id
+      JOIN utilisateurs u        ON r.gerant_id = u.id
       LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
-      LEFT JOIN rapport_gaz    g ON g.rapport_id = r.id
+      LEFT JOIN rapport_gaz g    ON g.rapport_id = r.id
       WHERE r.site_id = $1
     `;
     const params = [siteId];
@@ -257,11 +268,12 @@ router.get('/:id', requireAuth, async (req, res) => {
         s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov,
         s.moov_p2, s.tresor, s.especes, s.unites,
         g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites
+        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites,
+        g.caisse_gaz_disponible
       FROM rapports r
-      JOIN utilisateurs u       ON r.gerant_id  = u.id
+      JOIN utilisateurs u        ON r.gerant_id = u.id
       LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
-      LEFT JOIN rapport_gaz    g ON g.rapport_id = r.id
+      LEFT JOIN rapport_gaz g    ON g.rapport_id = r.id
       WHERE r.id = $1
         AND r.site_id = $2
       `,
@@ -323,8 +335,13 @@ router.put('/:id', requireAuth, async (req, res) => {
     const oldGazRes = await client.query(
       `
       SELECT
-        b12_vendues, b12_rechargees, b12_fuites,
-        b6_vendues,  b6_rechargees,  b6_fuites
+        b12_vendues,
+        b12_rechargees,
+        b12_fuites,
+        b6_vendues,
+        b6_rechargees,
+        b6_fuites,
+        caisse_gaz_disponible
       FROM rapport_gaz
       WHERE rapport_id = $1
       `,
@@ -337,7 +354,8 @@ router.put('/:id', requireAuth, async (req, res) => {
       b12_fuites: 0,
       b6_vendues: 0,
       b6_rechargees: 0,
-      b6_fuites: 0
+      b6_fuites: 0,
+      caisse_gaz_disponible: 0
     };
 
     const newB12v = toPositiveInt(gaz?.b12v);
@@ -346,6 +364,9 @@ router.put('/:id', requireAuth, async (req, res) => {
     const newB6v = toPositiveInt(gaz?.b6v);
     const newB6r = toPositiveInt(gaz?.b6r);
     const newB6f = toPositiveInt(gaz?.b6f);
+    const newCaisseGazDisponible = toPositiveInt(
+      gaz?.caisse_gaz_disponible ?? gaz?.caisse_disponible
+    );
 
     const deltaB12r = newB12r - Number(oldGaz.b12_rechargees || 0);
     const deltaB12v = newB12v - Number(oldGaz.b12_vendues || 0);
@@ -403,10 +424,11 @@ router.put('/:id', requireAuth, async (req, res) => {
           b12_fuites = $3,
           b6_vendues = $4,
           b6_rechargees = $5,
-          b6_fuites = $6
-      WHERE rapport_id = $7
+          b6_fuites = $6,
+          caisse_gaz_disponible = $7
+      WHERE rapport_id = $8
       `,
-      [newB12v, newB12r, newB12f, newB6v, newB6r, newB6f, id]
+      [newB12v, newB12r, newB12f, newB6v, newB6r, newB6f, newCaisseGazDisponible, id]
     );
 
     await client.query(

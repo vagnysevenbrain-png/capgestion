@@ -22,9 +22,7 @@ router.get('/', requireAuth, async (req, res) => {
       fondMmRes,
       fondMisADispoRes,
       fondMouvementsRes,
-      gazConfigRes,
-      gazCaisseRes,
-      gazMouvementsRes
+      gazConfigRes
     ] = await Promise.all([
       db.query(
         `SELECT * FROM fond_mm WHERE site_id = $1`,
@@ -61,35 +59,14 @@ router.get('/', requireAuth, async (req, res) => {
       db.query(
         `SELECT * FROM gaz_config WHERE site_id = $1`,
         [siteId]
-      ),
-
-      db.query(
-        `
-        SELECT caisse_gaz_theorique
-        FROM v_gaz_caisse_theorique
-        WHERE site_id = $1
-        `,
-        [siteId]
-      ),
-
-      db.query(
-        `
-        SELECT
-          id,
-          date_mouvement,
-          type_mvt,
-          montant,
-          note,
-          cree_par,
-          created_at
-        FROM gaz_caisse_mouvements
-        WHERE site_id = $1
-        ORDER BY date_mouvement DESC, id DESC
-        LIMIT 20
-        `,
-        [siteId]
       )
     ]);
+
+    const gaz = gazConfigRes.rows[0] || null;
+    const besoinRechargeGaz = gaz
+      ? (Number(gaz.b12_vides || 0) * Number(gaz.b12_cout_recharge || 0)) +
+      (Number(gaz.b6_vides || 0) * Number(gaz.b6_cout_recharge || 0))
+      : 0;
 
     res.json({
       fond_mm: fondMmRes.rows[0] || null,
@@ -97,11 +74,8 @@ router.get('/', requireAuth, async (req, res) => {
         fondMisADispoRes.rows[0]?.fond_mis_a_disposition || 0
       ),
       mouvements_fond_mis_a_disposition: fondMouvementsRes.rows,
-      gaz: gazConfigRes.rows[0] || null,
-      caisse_gaz_theorique: Number(
-        gazCaisseRes.rows[0]?.caisse_gaz_theorique || 0
-      ),
-      mouvements_caisse_gaz: gazMouvementsRes.rows
+      gaz,
+      besoin_recharge_gaz: besoinRechargeGaz
     });
   } catch (err) {
     console.error('Erreur lecture fond/gaz:', err);
@@ -343,125 +317,6 @@ router.put('/gaz', requireAuth, requireProprietaire, async (req, res) => {
     });
   } catch (err) {
     console.error('Erreur mise à jour gaz:', err);
-    res.status(500).json({ erreur: 'Erreur serveur.' });
-  }
-});
-
-/**
- * GET /api/fond/gaz/caisse
- * Lit la caisse gaz théorique + historique
- */
-router.get('/gaz/caisse', requireAuth, async (req, res) => {
-  const siteId = req.session.siteId;
-
-  try {
-    const [soldeRes, mouvementsRes] = await Promise.all([
-      db.query(
-        `
-        SELECT caisse_gaz_theorique
-        FROM v_gaz_caisse_theorique
-        WHERE site_id = $1
-        `,
-        [siteId]
-      ),
-      db.query(
-        `
-        SELECT
-          id,
-          date_mouvement,
-          type_mvt,
-          montant,
-          note,
-          cree_par,
-          created_at
-        FROM gaz_caisse_mouvements
-        WHERE site_id = $1
-        ORDER BY date_mouvement DESC, id DESC
-        LIMIT 50
-        `,
-        [siteId]
-      )
-    ]);
-
-    res.json({
-      caisse_gaz_theorique: Number(
-        soldeRes.rows[0]?.caisse_gaz_theorique || 0
-      ),
-      mouvements: mouvementsRes.rows
-    });
-  } catch (err) {
-    console.error('Erreur lecture caisse gaz:', err);
-    res.status(500).json({ erreur: 'Erreur serveur.' });
-  }
-});
-
-/**
- * POST /api/fond/gaz/caisse
- * Ajoute un mouvement de caisse gaz
- * appro/retrait réservés au propriétaire
- */
-router.post('/gaz/caisse', requireAuth, async (req, res) => {
-  const siteId = req.session.siteId;
-  const userId = req.session.userId;
-  const role = req.session.role;
-  const { type_mvt, montant, note } = req.body;
-
-  const typesAutorises = [
-    'vente',
-    'recharge',
-    'depense',
-    'ajustement_plus',
-    'ajustement_moins',
-    'appro',
-    'retrait'
-  ];
-
-  if (!typesAutorises.includes(type_mvt)) {
-    return res.status(400).json({ erreur: 'Type de mouvement gaz invalide.' });
-  }
-
-  if ((type_mvt === 'appro' || type_mvt === 'retrait') && role !== 'proprietaire') {
-    return res.status(403).json({ erreur: 'Seul le propriétaire peut faire appro/retrait sur la caisse gaz.' });
-  }
-
-  const montantNum = toNonNegativeInt(montant, 0);
-  if (montantNum <= 0) {
-    return res.status(400).json({ erreur: 'Montant invalide.' });
-  }
-
-  try {
-    await db.query(
-      `
-      INSERT INTO gaz_caisse_mouvements (
-        site_id,
-        date_mouvement,
-        type_mvt,
-        montant,
-        note,
-        cree_par
-      )
-      VALUES ($1, NOW(), $2, $3, $4, $5)
-      `,
-      [siteId, type_mvt, montantNum, note?.trim() || null, userId]
-    );
-
-    const soldeRes = await db.query(
-      `
-      SELECT caisse_gaz_theorique
-      FROM v_gaz_caisse_theorique
-      WHERE site_id = $1
-      `,
-      [siteId]
-    );
-
-    res.json({
-      ok: true,
-      caisse_gaz_theorique: Number(
-        soldeRes.rows[0]?.caisse_gaz_theorique || 0
-      )
-    });
-  } catch (err) {
-    console.error('Erreur mouvement caisse gaz:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
   }
 });

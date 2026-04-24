@@ -275,33 +275,11 @@
                 </div>
             </div>
             <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Caisse gaz</div>
-            <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Type</label>
-                    <select id="cg-type" class="form-input">
-                        <option value="vente">vente</option>
-                        <option value="recharge">recharge</option>
-                        <option value="depense">depense</option>
-                        <option value="ajustement_plus">ajustement_plus</option>
-                        <option value="ajustement_moins">ajustement_moins</option>
-                        <option value="appro">appro</option>
-                        <option value="retrait">retrait</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Montant</label>
-                    <input id="cg-montant" class="form-input" placeholder="Ex: 15000" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Note</label>
-                    <input id="cg-note" class="form-input" placeholder="Motif" />
-                </div>
-            </div>
-            <button class="btn btn-primary" onclick="ajouterMouvementCaisseGaz()">Ajouter mouvement caisse gaz</button>
+            <p style="margin-top:10px;">
+                La <strong>caisse gaz disponible</strong> n’est plus saisie ici.
+                Elle doit être renseignée dans le <strong>rapport journalier</strong> du gérant,
+                puis comparée à la <strong>caisse théorique gaz</strong> calculée automatiquement.
+            </p>
         </div>
 
         <div class="card">
@@ -521,17 +499,6 @@
                     b6_prix_vente: document.getElementById('gaz-b6-prix').value,
                     b12_cout_recharge: document.getElementById('gaz-b12-recharge').value,
                     b6_cout_recharge: document.getElementById('gaz-b6-recharge').value
-                })
-            });
-        }
-
-        async function ajouterMouvementCaisseGaz() {
-            await api('/api/fond/gaz/caisse', {
-                method: 'POST',
-                body: JSON.stringify({
-                    type_mvt: document.getElementById('cg-type').value,
-                    montant: document.getElementById('cg-montant').value,
-                    note: document.getElementById('cg-note').value
                 })
             });
         }

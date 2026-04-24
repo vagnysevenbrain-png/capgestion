@@ -23,7 +23,6 @@ router.get('/', requireAuth, async (req, res) => {
             comptesClientsRes,
             fondMisADispoRes,
             gazConfigRes,
-            caisseGazRes,
             rapportJourRes,
             depensesJourRes
         ] = await Promise.all([
@@ -71,22 +70,14 @@ router.get('/', requireAuth, async (req, res) => {
 
             db.query(
                 `
-        SELECT caisse_gaz_theorique
-        FROM v_gaz_caisse_theorique
-        WHERE site_id = $1
-        `,
-                [siteId]
-            ),
-
-            db.query(
-                `
         SELECT
           r.id,
           r.date_rapport,
           r.observation,
           s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov, s.moov_p2, s.tresor, s.especes, s.unites,
           g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-          g.b6_vendues, g.b6_rechargees, g.b6_fuites
+          g.b6_vendues, g.b6_rechargees, g.b6_fuites,
+          g.caisse_gaz_disponible
         FROM rapports r
         LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
         LEFT JOIN rapport_gaz g ON g.rapport_id = r.id
@@ -113,7 +104,6 @@ router.get('/', requireAuth, async (req, res) => {
         const comptesClients = comptesClientsRes.rows[0] || {};
         const fondMisADispo = fondMisADispoRes.rows[0] || { fond_mis_a_disposition: 0 };
         const gazConfig = gazConfigRes.rows[0] || null;
-        const caisseGaz = caisseGazRes.rows[0] || { caisse_gaz_theorique: 0 };
         const rapportJour = rapportJourRes.rows[0] || null;
         const depensesJour = depensesJourRes.rows[0] || { total_depenses_jour: 0 };
 
@@ -137,28 +127,25 @@ router.get('/', requireAuth, async (req, res) => {
         const fondMisADisposition = toNumber(fondMisADispo.fond_mis_a_disposition);
         const perteOuExcedent = tresorerieCorrigee - fondMisADisposition;
 
-        let besoinRecharge = 0;
-        let commissionGazJour = 0;
-        let ventesGazJour = 0;
+        const b12Vides = toNumber(gazConfig?.b12_vides);
+        const b6Vides = toNumber(gazConfig?.b6_vides);
+        const coutRechargeB12 = toNumber(gazConfig?.b12_cout_recharge);
+        const coutRechargeB6 = toNumber(gazConfig?.b6_cout_recharge);
 
-        if (gazConfig) {
-            besoinRecharge =
-                toNumber(gazConfig.b12_vides) * toNumber(gazConfig.b12_cout_recharge) +
-                toNumber(gazConfig.b6_vides) * toNumber(gazConfig.b6_cout_recharge);
+        const caisseTheoriqueGaz =
+            (b12Vides * coutRechargeB12) +
+            (b6Vides * coutRechargeB6);
 
-            if (rapportJour) {
-                commissionGazJour =
-                    toNumber(rapportJour.b12_vendues) * toNumber(gazConfig.b12_commission) +
-                    toNumber(rapportJour.b6_vendues) * toNumber(gazConfig.b6_commission);
+        const caisseGazDisponible = toNumber(rapportJour?.caisse_gaz_disponible);
+        const ecartCaisseGaz = caisseGazDisponible - caisseTheoriqueGaz;
 
-                ventesGazJour =
-                    toNumber(rapportJour.b12_vendues) * toNumber(gazConfig.b12_prix_vente) +
-                    toNumber(rapportJour.b6_vendues) * toNumber(gazConfig.b6_prix_vente);
-            }
-        }
+        const commissionGazJour =
+            (toNumber(rapportJour?.b12_vendues) * toNumber(gazConfig?.b12_commission)) +
+            (toNumber(rapportJour?.b6_vendues) * toNumber(gazConfig?.b6_commission));
 
-        const caisseGazTheorique = toNumber(caisseGaz.caisse_gaz_theorique);
-        const soldeRechargeGaz = caisseGazTheorique - besoinRecharge;
+        const ventesGazJour =
+            (toNumber(rapportJour?.b12_vendues) * toNumber(gazConfig?.b12_prix_vente)) +
+            (toNumber(rapportJour?.b6_vendues) * toNumber(gazConfig?.b6_prix_vente));
 
         res.json({
             date_du_jour: today,
@@ -194,16 +181,14 @@ router.get('/', requireAuth, async (req, res) => {
 
             gaz: {
                 b12_pleines: toNumber(gazConfig?.b12_pleines),
-                b12_vides: toNumber(gazConfig?.b12_vides),
+                b12_vides: b12Vides,
                 b12_stock: toNumber(gazConfig?.b12_stock),
                 b6_pleines: toNumber(gazConfig?.b6_pleines),
-                b6_vides: toNumber(gazConfig?.b6_vides),
+                b6_vides: b6Vides,
                 b6_stock: toNumber(gazConfig?.b6_stock),
-                b12_cout_recharge: toNumber(gazConfig?.b12_cout_recharge),
-                b6_cout_recharge: toNumber(gazConfig?.b6_cout_recharge),
-                besoin_recharge: besoinRecharge,
-                caisse_gaz_theorique: caisseGazTheorique,
-                solde_recharge_gaz: soldeRechargeGaz
+                b12_cout_recharge: coutRechargeB12,
+                b6_cout_recharge: coutRechargeB6,
+                caisse_theorique_gaz: caisseTheoriqueGaz
             },
 
             activite_du_jour: {
@@ -216,6 +201,8 @@ router.get('/', requireAuth, async (req, res) => {
                 b6_fuites: toNumber(rapportJour?.b6_fuites),
                 ventes_gaz_jour: ventesGazJour,
                 commission_gaz_jour: commissionGazJour,
+                caisse_gaz_disponible: caisseGazDisponible,
+                ecart_caisse_gaz: ecartCaisseGaz,
                 total_depenses_jour: toNumber(depensesJour.total_depenses_jour)
             }
         });

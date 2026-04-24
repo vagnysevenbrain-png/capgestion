@@ -41,6 +41,57 @@
             color: #6B7280;
             font-size: 12px;
         }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .dash-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .dash-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+
+        .dash-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .dash-sub {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .dash-good .dash-value {
+            color: #047857;
+        }
+
+        .dash-bad .dash-value {
+            color: #b91c1c;
+        }
+
+        .dash-warn .dash-value {
+            color: #b45309;
+        }
+
+        .section-label {
+            font-weight: 600;
+            margin: 8px 0 12px;
+            color: #111827;
+        }
     </style>
 </head>
 
@@ -55,14 +106,72 @@
 
     <div class="page-content">
         <div class="card">
+            <div class="card-title">Dashboard du jour</div>
+
+            <div class="dashboard-grid">
+                <div class="dash-card" id="card-fonds">
+                    <div class="dash-label">Fonds disponibles</div>
+                    <div class="dash-value" id="dash-fonds">0 FCFA</div>
+                    <div class="dash-sub" id="dash-source-fonds">Source : -</div>
+                </div>
+
+                <div class="dash-card" id="card-treso">
+                    <div class="dash-label">Trésorerie corrigée</div>
+                    <div class="dash-value" id="dash-treso">0 FCFA</div>
+                    <div class="dash-sub">Fonds + solde net comptes clients</div>
+                </div>
+
+                <div class="dash-card" id="card-perte">
+                    <div class="dash-label">Perte / Excédent</div>
+                    <div class="dash-value" id="dash-perte">0 FCFA</div>
+                    <div class="dash-sub" id="dash-fond-mis">Fond mis à disposition : 0 FCFA</div>
+                </div>
+
+                <div class="dash-card" id="card-caisse-theorique">
+                    <div class="dash-label">Caisse théorique gaz</div>
+                    <div class="dash-value" id="dash-caisse-theorique">0 FCFA</div>
+                    <div class="dash-sub" id="dash-bouteilles-vides">B12 vides : 0 | B6 vides : 0</div>
+                </div>
+
+                <div class="dash-card" id="card-caisse-dispo">
+                    <div class="dash-label">Caisse gaz disponible</div>
+                    <div class="dash-value" id="dash-caisse-dispo">0 FCFA</div>
+                    <div class="dash-sub">Saisie du gérant dans le rapport du jour</div>
+                </div>
+
+                <div class="dash-card" id="card-ecart-gaz">
+                    <div class="dash-label">Écart caisse gaz</div>
+                    <div class="dash-value" id="dash-ecart-gaz">0 FCFA</div>
+                    <div class="dash-sub">Disponible - Théorique</div>
+                </div>
+
+                <div class="dash-card" id="card-commission">
+                    <div class="dash-label">Commission gaz du jour</div>
+                    <div class="dash-value" id="dash-commission">0 FCFA</div>
+                    <div class="dash-sub" id="dash-ventes-jour">Ventes du jour : 0 FCFA</div>
+                </div>
+
+                <div class="dash-card" id="card-comptes-clients">
+                    <div class="dash-label">Solde net comptes clients</div>
+                    <div class="dash-value" id="dash-comptes-clients">0 FCFA</div>
+                    <div class="dash-sub" id="dash-comptes-stats">Actifs : 0 | Inactifs : 0</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" onclick="testerDashboard()">Actualiser le dashboard</button>
+                <button class="btn" onclick="chargerEtatFond()">Charger fond / gaz</button>
+                <button class="btn" onclick="testerSession()">Tester la session</button>
+            </div>
+        </div>
+
+        <div class="card">
             <div class="card-title">Tests API</div>
             <div class="actions">
-                <button class="btn btn-primary" onclick="testerSession()">Tester la session</button>
-                <button class="btn" onclick="testerDashboard()">Tester le dashboard</button>
-                <button class="btn" onclick="chargerEtatFond()">Charger fond / gaz</button>
                 <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
                 <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
                 <button class="btn" onclick="testerEmployes()">Lister employés</button>
+                <button class="btn" onclick="chargerRapportsDuMoisCourant()">Rapports mois courant</button>
             </div>
         </div>
 
@@ -155,7 +264,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Indication</label>
-                    <div class="form-input muted" style="min-height: 42px; display:flex; align-items:center;">
+                    <div class="form-input muted" style="min-height:42px; display:flex; align-items:center;">
                         Ce montant sera comparé à la caisse théorique gaz dans le dashboard.
                     </div>
                 </div>
@@ -169,7 +278,7 @@
             </div>
             <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
 
-            <div class="actions" style="margin-top: 14px;">
+            <div class="actions" style="margin-top:14px;">
                 <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
                 <button class="btn" onclick="reinitialiserRapport()">Réinitialiser le formulaire</button>
             </div>
@@ -440,6 +549,50 @@
                 : JSON.stringify(data, null, 2);
         }
 
+        function fcfa(value) {
+            return `${new Intl.NumberFormat('fr-FR').format(Number(value || 0))} FCFA`;
+        }
+
+        function setCardState(id, state) {
+            const el = document.getElementById(id);
+            el.classList.remove('dash-good', 'dash-bad', 'dash-warn');
+            if (state) el.classList.add(state);
+        }
+
+        function renderDashboardCards(data) {
+            const fonds = data.fonds_mm || {};
+            const treso = data.tresorerie || {};
+            const gaz = data.gaz || {};
+            const activite = data.activite_du_jour || {};
+            const comptes = data.comptes_clients || {};
+
+            document.getElementById('dash-fonds').textContent = fcfa(fonds.fonds_disponibles);
+            document.getElementById('dash-source-fonds').textContent = `Source : ${fonds.source || '-'}`;
+
+            document.getElementById('dash-treso').textContent = fcfa(treso.tresorerie_corrigee);
+
+            document.getElementById('dash-perte').textContent = fcfa(treso.perte_ou_excedent);
+            document.getElementById('dash-fond-mis').textContent = `Fond mis à disposition : ${fcfa(treso.fond_mis_a_disposition)}`;
+
+            document.getElementById('dash-caisse-theorique').textContent = fcfa(gaz.caisse_theorique_gaz);
+            document.getElementById('dash-bouteilles-vides').textContent = `B12 vides : ${gaz.b12_vides || 0} | B6 vides : ${gaz.b6_vides || 0}`;
+
+            document.getElementById('dash-caisse-dispo').textContent = fcfa(activite.caisse_gaz_disponible);
+            document.getElementById('dash-ecart-gaz').textContent = fcfa(activite.ecart_caisse_gaz);
+
+            document.getElementById('dash-commission').textContent = fcfa(activite.commission_gaz_jour);
+            document.getElementById('dash-ventes-jour').textContent = `Ventes du jour : ${fcfa(activite.ventes_gaz_jour)}`;
+
+            document.getElementById('dash-comptes-clients').textContent = fcfa(comptes.solde_net_comptes_clients);
+            document.getElementById('dash-comptes-stats').textContent = `Actifs : ${comptes.comptes_actifs || 0} | Inactifs : ${comptes.comptes_inactifs || 0}`;
+
+            setCardState('card-perte', Number(treso.perte_ou_excedent) >= 0 ? 'dash-good' : 'dash-bad');
+            setCardState('card-ecart-gaz', Number(activite.ecart_caisse_gaz) >= 0 ? 'dash-good' : 'dash-bad');
+            setCardState('card-commission', Number(activite.commission_gaz_jour) > 0 ? 'dash-good' : '');
+            setCardState('card-fonds', Number(fonds.fonds_disponibles) > 0 ? 'dash-good' : '');
+            setCardState('card-caisse-dispo', Number(activite.caisse_gaz_disponible) > 0 ? 'dash-warn' : '');
+        }
+
         function valeurChamp(id) {
             return document.getElementById(id).value;
         }
@@ -466,6 +619,50 @@
             const { res, data } = await fetchJson(url, options);
             afficher(data);
             return { res, data };
+        }
+
+        async function chargerListeClientsDansSelect() {
+            try {
+                const { data } = await fetchJson('/api/comptes-clients');
+                selectClient.innerHTML = '<option value="">Choisir un client</option>';
+
+                if (Array.isArray(data)) {
+                    data.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.id;
+                        option.textContent = `${client.nom}${client.telephone ? ' - ' + client.telephone : ''}`;
+                        selectClient.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Erreur chargement liste clients:', err);
+            }
+        }
+
+        function remplirFormulaireFond(data) {
+            const fond = data.fond_mm || {};
+            const gaz = data.gaz || {};
+
+            document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
+            document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
+            document.getElementById('mm-wave').value = fond.wave ?? 0;
+            document.getElementById('mm-mtn').value = fond.mtn ?? 0;
+            document.getElementById('mm-moov').value = fond.moov ?? 0;
+            document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
+            document.getElementById('mm-tresor').value = fond.tresor ?? 0;
+            document.getElementById('mm-unites').value = fond.unites ?? 0;
+            document.getElementById('mm-especes').value = fond.especes ?? 0;
+
+            document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
+            document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
+            document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
+            document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
+            document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
+            document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
+            document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
+            document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
+            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
+            document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
         function refreshDepensesRapportUI() {
@@ -531,66 +728,20 @@
             refreshDepensesRapportUI();
         }
 
-        async function chargerListeClientsDansSelect() {
-            try {
-                const { data } = await fetchJson('/api/comptes-clients');
-
-                selectClient.innerHTML = '<option value="">Choisir un client</option>';
-
-                if (Array.isArray(data)) {
-                    data.forEach(client => {
-                        const option = document.createElement('option');
-                        option.value = client.id;
-                        option.textContent = `${client.nom}${client.telephone ? ' - ' + client.telephone : ''}`;
-                        selectClient.appendChild(option);
-                    });
-                }
-            } catch (err) {
-                console.error('Erreur chargement liste clients:', err);
-            }
-        }
-
-        function remplirFormulaireFond(data) {
-            const fond = data.fond_mm || {};
-            const gaz = data.gaz || {};
-
-            document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
-            document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
-            document.getElementById('mm-wave').value = fond.wave ?? 0;
-            document.getElementById('mm-mtn').value = fond.mtn ?? 0;
-            document.getElementById('mm-moov').value = fond.moov ?? 0;
-            document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
-            document.getElementById('mm-tresor').value = fond.tresor ?? 0;
-            document.getElementById('mm-unites').value = fond.unites ?? 0;
-            document.getElementById('mm-especes').value = fond.especes ?? 0;
-
-            document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
-            document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
-            document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
-            document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
-            document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
-            document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
-            document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
-            document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
-            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
-            document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
-        }
-
         async function testerSession() {
             const { res, data } = await api('/api/auth/moi');
             etatSession.textContent = (res.ok && data.connecte) ? 'Session OK' : 'Session KO';
         }
 
         async function testerDashboard() {
-            const { res } = await api('/api/dashboard');
+            const { res, data } = await api('/api/dashboard');
             etatSession.textContent = res.ok ? 'Dashboard OK' : 'Dashboard KO';
+            if (res.ok) renderDashboardCards(data);
         }
 
         async function chargerEtatFond() {
             const { res, data } = await api('/api/fond');
-            if (res.ok) {
-                remplirFormulaireFond(data);
-            }
+            if (res.ok) remplirFormulaireFond(data);
         }
 
         async function chargerRapports() {
@@ -633,10 +784,14 @@
                 depenses: depensesRapport
             };
 
-            await api('/api/rapports', {
+            const { res } = await api('/api/rapports', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
+
+            if (res.ok) {
+                await testerDashboard();
+            }
         }
 
         async function testerComptesClients() {
@@ -679,6 +834,8 @@
                     note: document.getElementById('mvt-note').value
                 })
             });
+
+            await testerDashboard();
         }
 
         async function testerUtilisateurs() {
@@ -724,6 +881,8 @@
                     motif: document.getElementById('fmd-motif').value
                 })
             });
+
+            await testerDashboard();
         }
 
         async function mettreAJourFondMM() {
@@ -741,6 +900,8 @@
                     especes: document.getElementById('mm-especes').value
                 })
             });
+
+            await testerDashboard();
         }
 
         async function mettreAJourGaz() {
@@ -759,6 +920,8 @@
                     b6_cout_recharge: document.getElementById('gaz-b6-recharge').value
                 })
             });
+
+            await testerDashboard();
         }
 
         async function logout() {
@@ -775,6 +938,7 @@
         refreshDepensesRapportUI();
         chargerListeClientsDansSelect();
         chargerEtatFond();
+        testerDashboard();
     </script>
 </body>
 

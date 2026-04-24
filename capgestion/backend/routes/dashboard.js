@@ -74,9 +74,23 @@ router.get('/', requireAuth, async (req, res) => {
           r.id,
           r.date_rapport,
           r.observation,
-          s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov, s.moov_p2, s.tresor, s.especes, s.unites,
-          g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-          g.b6_vendues, g.b6_rechargees, g.b6_fuites,
+
+          s.orange_rev,
+          s.orange_pdv,
+          s.wave,
+          s.mtn,
+          s.moov,
+          s.moov_p2,
+          s.tresor,
+          s.especes,
+          s.unites,
+
+          g.b12_vendues,
+          g.b12_rechargees,
+          g.b12_fuites,
+          g.b6_vendues,
+          g.b6_rechargees,
+          g.b6_fuites,
           g.caisse_gaz_disponible
         FROM rapports r
         LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
@@ -107,17 +121,43 @@ router.get('/', requireAuth, async (req, res) => {
         const rapportJour = rapportJourRes.rows[0] || null;
         const depensesJour = depensesJourRes.rows[0] || { total_depenses_jour: 0 };
 
-        const fondsDisponibles = fondMm
-            ? toNumber(fondMm.orange_rev) +
-            toNumber(fondMm.orange_pdv) +
-            toNumber(fondMm.wave) +
-            toNumber(fondMm.mtn) +
-            toNumber(fondMm.moov) +
-            toNumber(fondMm.moov_p2) +
-            toNumber(fondMm.tresor) +
-            toNumber(fondMm.unites) +
-            toNumber(fondMm.especes)
-            : 0;
+        // PRIORITÉ : si rapport du jour existe, utiliser ses soldes
+        const sourceFonds = rapportJour
+            ? {
+                orange_rev: toNumber(rapportJour.orange_rev),
+                orange_pdv: toNumber(rapportJour.orange_pdv),
+                orange_total: toNumber(rapportJour.orange_rev) + toNumber(rapportJour.orange_pdv),
+                wave: toNumber(rapportJour.wave),
+                mtn: toNumber(rapportJour.mtn),
+                moov: toNumber(rapportJour.moov),
+                moov_p2: toNumber(rapportJour.moov_p2),
+                tresor: toNumber(rapportJour.tresor),
+                unites: toNumber(rapportJour.unites),
+                especes: toNumber(rapportJour.especes)
+            }
+            : {
+                orange_rev: toNumber(fondMm?.orange_rev),
+                orange_pdv: toNumber(fondMm?.orange_pdv),
+                orange_total: toNumber(fondMm?.orange_total),
+                wave: toNumber(fondMm?.wave),
+                mtn: toNumber(fondMm?.mtn),
+                moov: toNumber(fondMm?.moov),
+                moov_p2: toNumber(fondMm?.moov_p2),
+                tresor: toNumber(fondMm?.tresor),
+                unites: toNumber(fondMm?.unites),
+                especes: toNumber(fondMm?.especes)
+            };
+
+        const fondsDisponibles =
+            sourceFonds.orange_rev +
+            sourceFonds.orange_pdv +
+            sourceFonds.wave +
+            sourceFonds.mtn +
+            sourceFonds.moov +
+            sourceFonds.moov_p2 +
+            sourceFonds.tresor +
+            sourceFonds.unites +
+            sourceFonds.especes;
 
         const totalClientsDebiteurs = toNumber(comptesClients.total_clients_debiteurs);
         const totalClientsCrediteurs = toNumber(comptesClients.total_clients_crediteurs);
@@ -151,17 +191,18 @@ router.get('/', requireAuth, async (req, res) => {
             date_du_jour: today,
 
             fonds_mm: {
-                orange_rev: toNumber(fondMm?.orange_rev),
-                orange_pdv: toNumber(fondMm?.orange_pdv),
-                orange_total: toNumber(fondMm?.orange_total),
-                wave: toNumber(fondMm?.wave),
-                mtn: toNumber(fondMm?.mtn),
-                moov: toNumber(fondMm?.moov),
-                moov_p2: toNumber(fondMm?.moov_p2),
-                tresor: toNumber(fondMm?.tresor),
-                unites: toNumber(fondMm?.unites),
-                especes: toNumber(fondMm?.especes),
-                fonds_disponibles: fondsDisponibles
+                orange_rev: sourceFonds.orange_rev,
+                orange_pdv: sourceFonds.orange_pdv,
+                orange_total: sourceFonds.orange_total,
+                wave: sourceFonds.wave,
+                mtn: sourceFonds.mtn,
+                moov: sourceFonds.moov,
+                moov_p2: sourceFonds.moov_p2,
+                tresor: sourceFonds.tresor,
+                unites: sourceFonds.unites,
+                especes: sourceFonds.especes,
+                fonds_disponibles: fondsDisponibles,
+                source: rapportJour ? 'rapport_du_jour' : 'fond_mm'
             },
 
             comptes_clients: {

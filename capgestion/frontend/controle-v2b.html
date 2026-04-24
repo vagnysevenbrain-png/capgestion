@@ -285,6 +285,34 @@
                 </div>
             </div>
 
+            <div class="section-label">Commissions mobile money du mois</div>
+            <div class="grid-3">
+                <div class="form-group">
+                    <label class="form-label">Commission Orange</label>
+                    <input id="mmc-orange" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission Wave</label>
+                    <input id="mmc-wave" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission MTN</label>
+                    <input id="mmc-mtn" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission Moov</label>
+                    <input id="mmc-moov" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission Trésor</label>
+                    <input id="mmc-tresor" class="form-input" placeholder="0" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commission Unités</label>
+                    <input id="mmc-unites" class="form-input" placeholder="0" />
+                </div>
+            </div>
+
             <div class="section-label">Salaires du mois</div>
             <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
 
@@ -599,6 +627,15 @@
             document.getElementById('ch-commentaire').value = charges.commentaire_autre_variable ?? '';
         }
 
+        function remplirCommissionsMm(commissions = {}) {
+            document.getElementById('mmc-orange').value = commissions.commission_orange ?? 0;
+            document.getElementById('mmc-wave').value = commissions.commission_wave ?? 0;
+            document.getElementById('mmc-mtn').value = commissions.commission_mtn ?? 0;
+            document.getElementById('mmc-moov').value = commissions.commission_moov ?? 0;
+            document.getElementById('mmc-tresor').value = commissions.commission_tresor ?? 0;
+            document.getElementById('mmc-unites').value = commissions.commission_unites ?? 0;
+        }
+
         function renderFinanceSalaires(employes = [], salaires = []) {
             const container = document.getElementById('finance-salaires-liste');
             if (!employes.length) {
@@ -899,12 +936,14 @@
                 fetchJson(`/api/charges/${encodeURIComponent(mois)}`)
             ]);
 
-            if (financeRes.res.ok) {
-                renderFinanceResume(financeRes.data.resume);
-                remplirChargesMensuelles(financeRes.data.charges);
-            } else {
+            if (!financeRes.res.ok) {
                 afficher(financeRes.data);
+                return;
             }
+
+            renderFinanceResume(financeRes.data.resume);
+            remplirChargesMensuelles(financeRes.data.charges);
+            remplirCommissionsMm(financeRes.data.commissions_mm || {});
 
             if (employesRes.res.ok) {
                 renderFinanceSalaires(employesRes.data, financeRes.data.salaires || []);
@@ -919,12 +958,13 @@
             }
 
             const rows = Array.from(document.querySelectorAll('#finance-salaires-liste [data-employe-id]'));
+
             for (const row of rows) {
                 const employeId = row.dataset.employeId;
                 const bonus = row.querySelector('.salaire-bonus').value;
                 const retenues = row.querySelector('.salaire-retenues').value;
 
-                await fetchJson(`/api/employes/${employeId}/salaires`, {
+                const saveRes = await fetchJson(`/api/employes/${employeId}/salaires`, {
                     method: 'POST',
                     body: JSON.stringify({
                         mois,
@@ -934,10 +974,16 @@
                         observation: null
                     })
                 });
+
+                if (!saveRes.res.ok) {
+                    afficher(saveRes.data);
+                    return;
+                }
             }
 
             await chargerFinanceMois();
-            afficher({ ok: true, message: 'Salaires du mois enregistrés.' });
+            await chargerSyntheseAnnuelle();
+            afficher({ ok: true, message: 'Salaires du mois enregistrés et résumé actualisé.' });
         }
 
         async function enregistrerChargesMensuelles() {
@@ -951,6 +997,12 @@
                 method: 'POST',
                 body: JSON.stringify({
                     mois,
+                    commission_orange: valeurChamp('mmc-orange'),
+                    commission_wave: valeurChamp('mmc-wave'),
+                    commission_mtn: valeurChamp('mmc-mtn'),
+                    commission_moov: valeurChamp('mmc-moov'),
+                    commission_tresor: valeurChamp('mmc-tresor'),
+                    commission_unites: valeurChamp('mmc-unites'),
                     loyer_magasin_principal: valeurChamp('ch-loyer-principal'),
                     loyer_magasin_gaz: valeurChamp('ch-loyer-gaz'),
                     eau_electricite: valeurChamp('ch-eau-elec'),
@@ -966,6 +1018,9 @@
 
             if (res.ok) {
                 renderFinanceResume(data.resume);
+                remplirChargesMensuelles(data.charges);
+                remplirCommissionsMm(data.commissions_mm || {});
+                await chargerSyntheseAnnuelle();
             }
         }
 

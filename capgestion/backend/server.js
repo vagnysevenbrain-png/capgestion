@@ -3,7 +3,7 @@ const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
-
+const employesRoutes = require('./routes/employes');
 const utilisateursRoutes = require('./routes/utilisateurs');
 const comptesClientsRoutes = require('./routes/comptesClients');
 const authRoutes = require('./routes/auth');
@@ -43,6 +43,7 @@ app.use('/api/rapports', rapportRoutes);
 app.use('/api/credits', creditRoutes);
 app.use('/api/charges', chargeRoutes);
 app.use('/api/fond', fondRoutes);
+app.use('/api/employes', employesRoutes);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));

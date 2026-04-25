@@ -4,19 +4,84 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Contrôle V2B</title>
+    <title>CAP GESTION V2</title>
     <link rel="stylesheet" href="/css/main.css" />
     <style>
-        pre {
-            background: #F7FAFC;
-            color: #2F3A44;
-            padding: 12px;
-            border-radius: 12px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
+        .tabs-wrap {
+            position: sticky;
+            top: 80px;
+            z-index: 35;
+            padding: 10px 10px 0;
+            background: linear-gradient(180deg, rgba(248, 250, 244, 0.98) 0%, rgba(248, 250, 244, 0.92) 100%);
+            backdrop-filter: blur(8px);
+        }
+
+        .tab-strip,
+        .subtab-strip {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding-bottom: 6px;
+        }
+
+        .tab-strip::-webkit-scrollbar,
+        .subtab-strip::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn,
+        .subtab-btn {
+            appearance: none;
+            border: 1px solid rgba(109, 187, 45, 0.18);
+            background: #fff;
+            color: var(--cap-text);
+            border-radius: 999px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(34, 46, 38, 0.04);
+        }
+
+        .tab-btn.active,
+        .subtab-btn.active {
+            background: linear-gradient(90deg, var(--cap-green) 0%, #8BCB2D 55%, var(--cap-yellow) 100%);
+            color: #1d1d1d;
+            border-color: transparent;
+        }
+
+        .tab-panel,
+        .subtab-panel {
+            display: none;
+        }
+
+        .tab-panel.active,
+        .subtab-panel.active {
+            display: block;
+        }
+
+        .tab-panel {
+            padding-top: 12px;
+        }
+
+        .section-stack>.card {
+            margin-bottom: 14px;
+        }
+
+        .panel-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .panel-title-row .muted {
             font-size: 12px;
-            border: 1px solid #DCE4EC;
         }
 
         .finance-table {
@@ -50,6 +115,45 @@
         .owner-only[hidden] {
             display: none !important;
         }
+
+        details.debug-box {
+            border: 1px solid #DFE8D4;
+            border-radius: 14px;
+            background: #FCFDF9;
+            padding: 10px 12px;
+        }
+
+        details.debug-box summary {
+            cursor: pointer;
+            font-weight: 700;
+            color: var(--cap-text);
+        }
+
+        pre {
+            background: #F7FAFC;
+            color: #2F3A44;
+            padding: 12px;
+            border-radius: 12px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 12px;
+            border: 1px solid #DCE4EC;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 720px) {
+            .tabs-wrap {
+                top: 76px;
+                padding: 8px 8px 0;
+            }
+
+            .tab-btn,
+            .subtab-btn {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 
@@ -69,500 +173,588 @@
         </div>
     </div>
 
-    <div class="page-content">
-        <div class="card">
-            <div class="card-title">Dashboard du jour</div>
-
-            <div class="dashboard-grid">
-                <div class="dash-card" id="card-fonds">
-                    <div class="dash-label">Fonds disponibles</div>
-                    <div class="dash-value" id="dash-fonds">0 FCFA</div>
-                    <div class="dash-sub" id="dash-source-fonds">Source : -</div>
-                </div>
-
-                <div class="dash-card" id="card-treso">
-                    <div class="dash-label">Trésorerie corrigée</div>
-                    <div class="dash-value" id="dash-treso">0 FCFA</div>
-                    <div class="dash-sub">Fonds + solde net comptes clients</div>
-                </div>
-
-                <div class="dash-card" id="card-perte">
-                    <div class="dash-label">Perte / Excédent</div>
-                    <div class="dash-value" id="dash-perte">0 FCFA</div>
-                    <div class="dash-sub" id="dash-fond-mis">Fond mis à disposition : 0 FCFA</div>
-                </div>
-
-                <div class="dash-card" id="card-caisse-theorique">
-                    <div class="dash-label">Caisse théorique gaz</div>
-                    <div class="dash-value" id="dash-caisse-theorique">0 FCFA</div>
-                    <div class="dash-sub" id="dash-bouteilles-vides">B12 vides : 0 | B6 vides : 0</div>
-                </div>
-
-                <div class="dash-card" id="card-caisse-dispo">
-                    <div class="dash-label">Caisse gaz disponible</div>
-                    <div class="dash-value" id="dash-caisse-dispo">0 FCFA</div>
-                    <div class="dash-sub">Saisie du gérant dans le rapport du jour</div>
-                </div>
-
-                <div class="dash-card" id="card-ecart-gaz">
-                    <div class="dash-label">Écart caisse gaz</div>
-                    <div class="dash-value" id="dash-ecart-gaz">0 FCFA</div>
-                    <div class="dash-sub">Disponible - Théorique</div>
-                </div>
-
-                <div class="dash-card" id="card-commission">
-                    <div class="dash-label">Commission gaz du jour</div>
-                    <div class="dash-value" id="dash-commission">0 FCFA</div>
-                    <div class="dash-sub" id="dash-ventes-jour">Ventes du jour : 0 FCFA</div>
-                </div>
-
-                <div class="dash-card" id="card-comptes-clients">
-                    <div class="dash-label">Solde net comptes clients</div>
-                    <div class="dash-value" id="dash-comptes-clients">0 FCFA</div>
-                    <div class="dash-sub" id="dash-comptes-stats">Actifs : 0 | Inactifs : 0</div>
-                </div>
-            </div>
-
-            <div class="actions">
-                <button class="btn btn-primary" onclick="testerDashboard()">Actualiser le dashboard</button>
-                <button class="btn" onclick="chargerEtatFond()">Charger fond / gaz</button>
-                <button class="btn" onclick="testerSession()">Tester la session</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Tests API</div>
-            <div class="actions">
-                <button class="btn" onclick="testerComptesClients()">Lister comptes clients</button>
-                <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
-                <button class="btn" onclick="testerEmployes()">Lister employés</button>
-                <button class="btn" onclick="chargerRapportsDuMoisCourant()">Rapports mois courant</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Rapport journalier</div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Date du rapport</label>
-                    <input id="r-date" type="date" class="form-input" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Observation</label>
-                    <input id="r-observation" class="form-input" placeholder="Observation générale" />
-                </div>
-            </div>
-
-            <div class="section-label">Soldes Mobile Money / caisse</div>
-            <div class="grid-3">
-                <div class="form-group"><label class="form-label">Orange Revendeur</label><input id="r-orange-rev"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Wave</label><input id="r-wave" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Moov</label><input id="r-moov" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Unités</label><input id="r-unites" class="form-input"
-                        placeholder="0" /></div>
-            </div>
-
-            <div class="section-label">Gaz</div>
-            <div class="grid-3">
-                <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f" class="form-input"
-                        placeholder="0" /></div>
-            </div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Caisse gaz disponible</label>
-                    <input id="r-caisse-gaz-disponible" class="form-input" placeholder="Montant réel en caisse gaz" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Indication</label>
-                    <div class="form-input muted" style="min-height:42px; display:flex; align-items:center;">
-                        Ce montant sera comparé à la caisse théorique gaz dans le dashboard.
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-label">Dépenses du jour</div>
-            <div class="dep-line">
-                <input id="dep-description" class="form-input" placeholder="Description dépense" />
-                <input id="dep-montant" class="form-input" placeholder="Montant" />
-                <button class="btn" onclick="ajouterDepense()">Ajouter dépense</button>
-            </div>
-            <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
-
-            <div class="actions" style="margin-top:14px;">
-                <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
-                <button class="btn" onclick="reinitialiserRapport()">Réinitialiser le formulaire</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Historique des rapports</div>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Mois (YYYY-MM)</label>
-                    <input id="hist-mois" class="form-input" placeholder="2026-04" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Action</label>
-                    <div class="actions">
-                        <button class="btn btn-primary" onclick="chargerRapports()">Charger les rapports</button>
-                        <button class="btn" onclick="chargerRapportsDuMoisCourant()">Mois courant</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card owner-only" id="finance-section" hidden>
-            <div class="card-title">Finance</div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Mois de travail (YYYY-MM)</label>
-                    <input id="finance-mois" class="form-input" placeholder="2026-04" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Année de synthèse</label>
-                    <input id="finance-annee" class="form-input" placeholder="2026" />
-                </div>
-            </div>
-
-            <div class="actions" style="margin-bottom: 14px;">
-                <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du mois</button>
-                <button class="btn" onclick="enregistrerTousSalairesMois()">Enregistrer salaires du mois</button>
-                <button class="btn" onclick="enregistrerCommissionsMm()">Enregistrer commissions MM</button>
-                <button class="btn" onclick="enregistrerChargesMensuelles()">Enregistrer charges mensuelles</button>
-                <button class="btn" onclick="chargerSyntheseAnnuelle()">Charger synthèse annuelle</button>
-            </div>
-
-            <div class="section-label">Résumé mensuel</div>
-            <div class="dashboard-grid">
-                <div class="dash-card">
-                    <div class="dash-label">Gain MM</div>
-                    <div class="dash-value" id="fin-gain-mm">0 FCFA</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-label">Gain gaz</div>
-                    <div class="dash-value" id="fin-gain-gaz">0 FCFA</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-label">Salaires</div>
-                    <div class="dash-value" id="fin-salaires">0 FCFA</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-label">Autres charges</div>
-                    <div class="dash-value" id="fin-autres-charges">0 FCFA</div>
-                </div>
-                <div class="dash-card">
-                    <div class="dash-label">Total charges</div>
-                    <div class="dash-value" id="fin-total-charges">0 FCFA</div>
-                </div>
-                <div class="dash-card" id="fin-card-benefice">
-                    <div class="dash-label">Bénéfice net</div>
-                    <div class="dash-value" id="fin-benefice">0 FCFA</div>
-                </div>
-            </div>
-
-            <div class="section-label">Commissions mobile money du mois</div>
-            <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Commission Orange</label>
-                    <input id="mmc-orange" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission Wave</label>
-                    <input id="mmc-wave" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission MTN</label>
-                    <input id="mmc-mtn" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission Moov</label>
-                    <input id="mmc-moov" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission Trésor</label>
-                    <input id="mmc-tresor" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Commission Unités</label>
-                    <input id="mmc-unites" class="form-input" placeholder="0" />
-                </div>
-            </div>
-
-            <div class="section-label">Salaires du mois</div>
-            <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
-
-            <div class="section-label">Charges mensuelles</div>
-            <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Loyer magasin principal</label>
-                    <input id="ch-loyer-principal" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Loyer magasin gaz</label>
-                    <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Eau / Électricité</label>
-                    <input id="ch-eau-elec" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Téléphone / Internet</label>
-                    <input id="ch-tel-internet" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Carburant</label>
-                    <input id="ch-carburant" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Taxe mairie</label>
-                    <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Photocopie</label>
-                    <input id="ch-photocopie" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Tontine</label>
-                    <input id="ch-tontine" class="form-input" placeholder="0" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Autre variable</label>
-                    <input id="ch-autre-variable" class="form-input" placeholder="0" />
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Commentaire autre variable</label>
-                <textarea id="ch-commentaire" class="form-input"
-                    placeholder="Précision sur les charges variables"></textarea>
-            </div>
-
-            <div class="section-label">Synthèse annuelle</div>
-            <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Créer un compte client</div>
-            <div class="grid-2">
-                <div class="form-group"><label class="form-label">Nom</label><input id="cc-nom" class="form-input"
-                        placeholder="Nom du client" /></div>
-                <div class="form-group"><label class="form-label">Téléphone</label><input id="cc-tel" class="form-input"
-                        placeholder="0700000000" /></div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Observation</label>
-                <textarea id="cc-obs" class="form-input" placeholder="Observation"></textarea>
-            </div>
-            <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Ajouter un mouvement sur un compte client</div>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Client</label>
-                    <select id="mvt-compte-id" class="form-input">
-                        <option value="">Choisir un client</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Type</label>
-                    <select id="mvt-type" class="form-input">
-                        <option value="credit">credit</option>
-                        <option value="remboursement">remboursement</option>
-                        <option value="avance">avance</option>
-                        <option value="ajustement_plus">ajustement_plus</option>
-                        <option value="ajustement_moins">ajustement_moins</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label class="form-label">Montant</label>
-                    <input id="mvt-montant" class="form-input" placeholder="Ex: 5000" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Mode de paiement</label>
-                    <select id="mvt-mode" class="form-input">
-                        <option value="">Choisir</option>
-                        <option value="mobile_money">mobile money</option>
-                        <option value="especes">espèces</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Note</label>
-                <textarea id="mvt-note" class="form-input" placeholder="Motif du mouvement"></textarea>
-            </div>
-
-            <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
-        </div>
-
-        <div class="card owner-only" hidden>
-            <div class="card-title">Créer un employé</div>
-            <div class="grid-3">
-                <div class="form-group"><label class="form-label">Nom</label><input id="emp-nom" class="form-input"
-                        placeholder="Nom employé" /></div>
-                <div class="form-group"><label class="form-label">Poste</label><input id="emp-poste" class="form-input"
-                        placeholder="Gérant / Caissier..." /></div>
-                <div class="form-group"><label class="form-label">Salaire de base</label><input id="emp-salaire"
-                        class="form-input" placeholder="Ex: 150000" /></div>
-            </div>
-            <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
-        </div>
-
-        <div class="card owner-only" hidden>
-            <div class="card-title">Créer un utilisateur / gérant</div>
-            <div class="grid-2">
-                <div class="form-group"><label class="form-label">Nom</label><input id="usr-nom" class="form-input"
-                        placeholder="Nom utilisateur" /></div>
-                <div class="form-group"><label class="form-label">Email</label><input id="usr-email" class="form-input"
-                        placeholder="email@exemple.com" /></div>
-            </div>
-
-            <div class="grid-2">
-                <div class="form-group"><label class="form-label">Mot de passe</label><input id="usr-password"
-                        type="password" class="form-input" placeholder="Minimum 6 caractères" /></div>
-                <div class="form-group">
-                    <label class="form-label">Rôle</label>
-                    <select id="usr-role" class="form-input">
-                        <option value="gerant">gerant</option>
-                        <option value="proprietaire">proprietaire</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">ID employé lié (facultatif)</label>
-                <input id="usr-employe-id" class="form-input" placeholder="Ex: 1" />
-            </div>
-
-            <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l’utilisateur</button>
-        </div>
-
-        <div class="card owner-only" hidden>
-            <div class="card-title">Fond mis à disposition</div>
-            <div class="grid-3">
-                <div class="form-group">
-                    <label class="form-label">Type</label>
-                    <select id="fmd-type" class="form-input">
-                        <option value="appro">appro</option>
-                        <option value="retrait">retrait</option>
-                    </select>
-                </div>
-                <div class="form-group"><label class="form-label">Montant</label><input id="fmd-montant"
-                        class="form-input" placeholder="Ex: 200000" /></div>
-                <div class="form-group"><label class="form-label">Motif</label><input id="fmd-motif" class="form-input"
-                        placeholder="Motif" /></div>
-            </div>
-            <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement fond</button>
-        </div>
-
-        <div class="card owner-only" hidden>
-            <div class="card-title">Mise à jour des fonds MM</div>
-            <div class="grid-3">
-                <div class="form-group"><label class="form-label">Orange Revendeur</label><input id="mm-orange-rev"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Orange PDV</label><input id="mm-orange-pdv"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Wave</label><input id="mm-wave" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">MTN</label><input id="mm-mtn" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Moov</label><input id="mm-moov" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Moov P2</label><input id="mm-moov-p2"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Trésor</label><input id="mm-tresor" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Unités</label><input id="mm-unites" class="form-input"
-                        placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Espèces</label><input id="mm-especes"
-                        class="form-input" placeholder="0" /></div>
-            </div>
-            <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds MM</button>
-        </div>
-
-        <div class="card owner-only" hidden>
-            <div class="card-title">Paramètres et stock gaz</div>
-            <div class="grid-3">
-                <div class="form-group"><label class="form-label">B12 pleines</label><input id="gaz-b12-pleines"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B12 vides</label><input id="gaz-b12-vides"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B6 pleines</label><input id="gaz-b6-pleines"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">B6 vides</label><input id="gaz-b6-vides"
-                        class="form-input" placeholder="0" /></div>
-                <div class="form-group"><label class="form-label">Commission B12</label><input id="gaz-b12-commission"
-                        class="form-input" placeholder="450" /></div>
-                <div class="form-group"><label class="form-label">Commission B6</label><input id="gaz-b6-commission"
-                        class="form-input" placeholder="350" /></div>
-                <div class="form-group"><label class="form-label">Prix vente B12</label><input id="gaz-b12-prix"
-                        class="form-input" placeholder="4950" /></div>
-                <div class="form-group"><label class="form-label">Prix vente B6</label><input id="gaz-b6-prix"
-                        class="form-input" placeholder="1850" /></div>
-                <div class="form-group"><label class="form-label">Coût recharge B12</label><input id="gaz-b12-recharge"
-                        class="form-input" placeholder="4950" /></div>
-                <div class="form-group"><label class="form-label">Coût recharge B6</label><input id="gaz-b6-recharge"
-                        class="form-input" placeholder="1850" /></div>
-            </div>
-            <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Résultat</div>
-            <pre id="sortie">Prêt.</pre>
+    <div class="tabs-wrap">
+        <div class="tab-strip" id="main-tab-strip">
+            <button class="tab-btn active" data-tab-btn="accueil" onclick="showMainTab('accueil')">Accueil</button>
+            <button class="tab-btn" data-tab-btn="rapport" onclick="showMainTab('rapport')">Rapport du jour</button>
+            <button class="tab-btn" data-tab-btn="clients" onclick="showMainTab('clients')">Clients / crédits</button>
+            <button class="tab-btn" data-tab-btn="historique" onclick="showMainTab('historique')">Historique</button>
+            <button class="tab-btn owner-only" hidden data-tab-btn="admin"
+                onclick="showMainTab('admin')">Administration</button>
         </div>
     </div>
 
+    <div class="page-content">
+        <section class="tab-panel active" data-tab-panel="accueil">
+            <div class="section-stack">
+                <div class="card">
+                    <div class="panel-title-row">
+                        <div class="card-title" style="margin-bottom:0;">Accueil</div>
+                        <div class="muted">Vue rapide de la journée</div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dash-card" id="card-fonds">
+                            <div class="dash-label">Fonds disponibles</div>
+                            <div class="dash-value" id="dash-fonds">0 FCFA</div>
+                            <div class="dash-sub" id="dash-source-fonds">Source : -</div>
+                        </div>
+
+                        <div class="dash-card" id="card-treso">
+                            <div class="dash-label">Trésorerie corrigée</div>
+                            <div class="dash-value" id="dash-treso">0 FCFA</div>
+                            <div class="dash-sub">Fonds + solde net comptes clients</div>
+                        </div>
+
+                        <div class="dash-card" id="card-perte">
+                            <div class="dash-label">Perte / Excédent</div>
+                            <div class="dash-value" id="dash-perte">0 FCFA</div>
+                            <div class="dash-sub" id="dash-fond-mis">Fond mis à disposition : 0 FCFA</div>
+                        </div>
+
+                        <div class="dash-card" id="card-caisse-theorique">
+                            <div class="dash-label">Caisse théorique gaz</div>
+                            <div class="dash-value" id="dash-caisse-theorique">0 FCFA</div>
+                            <div class="dash-sub" id="dash-bouteilles-vides">B12 vides : 0 | B6 vides : 0</div>
+                        </div>
+
+                        <div class="dash-card" id="card-caisse-dispo">
+                            <div class="dash-label">Caisse gaz disponible</div>
+                            <div class="dash-value" id="dash-caisse-dispo">0 FCFA</div>
+                            <div class="dash-sub">Saisie du gérant dans le rapport du jour</div>
+                        </div>
+
+                        <div class="dash-card" id="card-ecart-gaz">
+                            <div class="dash-label">Écart caisse gaz</div>
+                            <div class="dash-value" id="dash-ecart-gaz">0 FCFA</div>
+                            <div class="dash-sub">Disponible - Théorique</div>
+                        </div>
+
+                        <div class="dash-card" id="card-commission">
+                            <div class="dash-label">Commission gaz du jour</div>
+                            <div class="dash-value" id="dash-commission">0 FCFA</div>
+                            <div class="dash-sub" id="dash-ventes-jour">Ventes du jour : 0 FCFA</div>
+                        </div>
+
+                        <div class="dash-card" id="card-comptes-clients">
+                            <div class="dash-label">Solde net comptes clients</div>
+                            <div class="dash-value" id="dash-comptes-clients">0 FCFA</div>
+                            <div class="dash-sub" id="dash-comptes-stats">Actifs : 0 | Inactifs : 0</div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="testerDashboard()">Actualiser le dashboard</button>
+                        <button class="btn" onclick="showMainTab('rapport')">Aller au rapport</button>
+                        <button class="btn" onclick="showMainTab('clients')">Aller aux clients</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="rapport">
+            <div class="section-stack">
+                <div class="card">
+                    <div class="panel-title-row">
+                        <div class="card-title" style="margin-bottom:0;">Rapport du jour</div>
+                        <div class="muted">Saisie opérationnelle quotidienne</div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Date du rapport</label>
+                            <input id="r-date" type="date" class="form-input" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Observation</label>
+                            <input id="r-observation" class="form-input" placeholder="Observation générale" />
+                        </div>
+                    </div>
+
+                    <div class="section-label">Soldes Mobile Money / caisse</div>
+                    <div class="grid-3">
+                        <div class="form-group"><label class="form-label">Orange Revendeur</label><input
+                                id="r-orange-rev" class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Wave</label><input id="r-wave"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Moov</label><input id="r-moov"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">Unités</label><input id="r-unites"
+                                class="form-input" placeholder="0" /></div>
+                    </div>
+
+                    <div class="section-label">Gaz</div>
+                    <div class="grid-3">
+                        <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
+                                class="form-input" placeholder="0" /></div>
+                        <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f"
+                                class="form-input" placeholder="0" /></div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Caisse gaz disponible</label>
+                            <input id="r-caisse-gaz-disponible" class="form-input"
+                                placeholder="Montant réel en caisse gaz" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Indication</label>
+                            <div class="form-input muted" style="min-height:42px; display:flex; align-items:center;">
+                                Ce montant sera comparé à la caisse théorique gaz dans l’accueil.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section-label">Dépenses du jour</div>
+                    <div class="dep-line">
+                        <input id="dep-description" class="form-input" placeholder="Description dépense" />
+                        <input id="dep-montant" class="form-input" placeholder="Montant" />
+                        <button class="btn" onclick="ajouterDepense()">Ajouter dépense</button>
+                    </div>
+                    <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
+
+                    <div class="actions" style="margin-top:14px;">
+                        <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
+                        <button class="btn" onclick="reinitialiserRapport()">Réinitialiser</button>
+                        <button class="btn" onclick="showMainTab('accueil')">Retour accueil</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="clients">
+            <div class="section-stack">
+                <div class="card">
+                    <div class="panel-title-row">
+                        <div class="card-title" style="margin-bottom:0;">Clients / crédits</div>
+                        <div class="muted">Gestion terrain des comptes clients</div>
+                    </div>
+
+                    <div class="section-label">Créer un compte client</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Nom</label>
+                            <input id="cc-nom" class="form-input" placeholder="Nom du client" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Téléphone</label>
+                            <input id="cc-tel" class="form-input" placeholder="0700000000" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Observation</label>
+                        <textarea id="cc-obs" class="form-input" placeholder="Observation"></textarea>
+                    </div>
+                    <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
+
+                    <div class="section-label">Ajouter un mouvement</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Client</label>
+                            <select id="mvt-compte-id" class="form-input">
+                                <option value="">Choisir un client</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type</label>
+                            <select id="mvt-type" class="form-input">
+                                <option value="credit">credit</option>
+                                <option value="remboursement">remboursement</option>
+                                <option value="avance">avance</option>
+                                <option value="ajustement_plus">ajustement_plus</option>
+                                <option value="ajustement_moins">ajustement_moins</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Montant</label>
+                            <input id="mvt-montant" class="form-input" placeholder="Ex: 5000" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Mode de paiement</label>
+                            <select id="mvt-mode" class="form-input">
+                                <option value="">Choisir</option>
+                                <option value="mobile_money">mobile money</option>
+                                <option value="especes">espèces</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Note</label>
+                        <textarea id="mvt-note" class="form-input" placeholder="Motif du mouvement"></textarea>
+                    </div>
+
+                    <div class="actions">
+                        <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
+                        <button class="btn" onclick="testerComptesClients()">Rafraîchir la liste</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-panel" data-tab-panel="historique">
+            <div class="section-stack">
+                <div class="card">
+                    <div class="panel-title-row">
+                        <div class="card-title" style="margin-bottom:0;">Historique</div>
+                        <div class="muted">Consultation des rapports</div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Mois (YYYY-MM)</label>
+                            <input id="hist-mois" class="form-input" placeholder="2026-04" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Action</label>
+                            <div class="actions">
+                                <button class="btn btn-primary" onclick="chargerRapports()">Charger les
+                                    rapports</button>
+                                <button class="btn" onclick="chargerRapportsDuMoisCourant()">Mois courant</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="tab-panel owner-only" hidden data-tab-panel="admin">
+            <div class="section-stack">
+                <div class="card">
+                    <div class="panel-title-row">
+                        <div class="card-title" style="margin-bottom:0;">Administration</div>
+                        <div class="muted">Visible uniquement pour le propriétaire</div>
+                    </div>
+
+                    <div class="subtab-strip" id="admin-subtab-strip">
+                        <button class="subtab-btn active" data-admin-btn="finance"
+                            onclick="showAdminTab('finance')">Finance</button>
+                        <button class="subtab-btn" data-admin-btn="employes"
+                            onclick="showAdminTab('employes')">Employés</button>
+                        <button class="subtab-btn" data-admin-btn="utilisateurs"
+                            onclick="showAdminTab('utilisateurs')">Utilisateurs</button>
+                        <button class="subtab-btn" data-admin-btn="parametres"
+                            onclick="showAdminTab('parametres')">Paramètres</button>
+                    </div>
+
+                    <div class="subtab-panel active" data-admin-panel="finance">
+                        <div class="grid-2" style="margin-top:12px;">
+                            <div class="form-group">
+                                <label class="form-label">Mois de travail (YYYY-MM)</label>
+                                <input id="finance-mois" class="form-input" placeholder="2026-04" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Année de synthèse</label>
+                                <input id="finance-annee" class="form-input" placeholder="2026" />
+                            </div>
+                        </div>
+
+                        <div class="actions" style="margin-bottom:14px;">
+                            <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du
+                                mois</button>
+                            <button class="btn" onclick="enregistrerTousSalairesMois()">Enregistrer salaires du
+                                mois</button>
+                            <button class="btn" onclick="enregistrerCommissionsMm()">Enregistrer commissions MM</button>
+                            <button class="btn" onclick="enregistrerChargesMensuelles()">Enregistrer charges
+                                mensuelles</button>
+                            <button class="btn" onclick="chargerSyntheseAnnuelle()">Charger synthèse annuelle</button>
+                        </div>
+
+                        <div class="section-label">Résumé mensuel</div>
+                        <div class="dashboard-grid">
+                            <div class="dash-card">
+                                <div class="dash-label">Gain MM</div>
+                                <div class="dash-value" id="fin-gain-mm">0 FCFA</div>
+                            </div>
+                            <div class="dash-card">
+                                <div class="dash-label">Gain gaz</div>
+                                <div class="dash-value" id="fin-gain-gaz">0 FCFA</div>
+                            </div>
+                            <div class="dash-card">
+                                <div class="dash-label">Salaires</div>
+                                <div class="dash-value" id="fin-salaires">0 FCFA</div>
+                            </div>
+                            <div class="dash-card">
+                                <div class="dash-label">Autres charges</div>
+                                <div class="dash-value" id="fin-autres-charges">0 FCFA</div>
+                            </div>
+                            <div class="dash-card">
+                                <div class="dash-label">Total charges</div>
+                                <div class="dash-value" id="fin-total-charges">0 FCFA</div>
+                            </div>
+                            <div class="dash-card" id="fin-card-benefice">
+                                <div class="dash-label">Bénéfice net</div>
+                                <div class="dash-value" id="fin-benefice">0 FCFA</div>
+                            </div>
+                        </div>
+
+                        <div class="section-label">Commissions mobile money du mois</div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Commission Orange</label>
+                                <input id="mmc-orange" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commission Wave</label>
+                                <input id="mmc-wave" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commission MTN</label>
+                                <input id="mmc-mtn" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commission Moov</label>
+                                <input id="mmc-moov" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commission Trésor</label>
+                                <input id="mmc-tresor" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Commission Unités</label>
+                                <input id="mmc-unites" class="form-input" placeholder="0" />
+                            </div>
+                        </div>
+
+                        <div class="section-label">Salaires du mois</div>
+                        <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
+
+                        <div class="section-label">Charges mensuelles</div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="form-label">Loyer magasin principal</label>
+                                <input id="ch-loyer-principal" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Loyer magasin gaz</label>
+                                <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Eau / Électricité</label>
+                                <input id="ch-eau-elec" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Téléphone / Internet</label>
+                                <input id="ch-tel-internet" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Carburant</label>
+                                <input id="ch-carburant" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Taxe mairie</label>
+                                <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Photocopie</label>
+                                <input id="ch-photocopie" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tontine</label>
+                                <input id="ch-tontine" class="form-input" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Autre variable</label>
+                                <input id="ch-autre-variable" class="form-input" placeholder="0" />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Commentaire autre variable</label>
+                            <textarea id="ch-commentaire" class="form-input"
+                                placeholder="Précision sur les charges variables"></textarea>
+                        </div>
+
+                        <div class="section-label">Synthèse annuelle</div>
+                        <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.</div>
+                    </div>
+
+                    <div class="subtab-panel" data-admin-panel="employes">
+                        <div style="margin-top:12px;">
+                            <div class="actions" style="margin-bottom:12px;">
+                                <button class="btn btn-primary" onclick="testerEmployes()">Lister employés</button>
+                            </div>
+
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label class="form-label">Nom</label>
+                                    <input id="emp-nom" class="form-input" placeholder="Nom employé" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Poste</label>
+                                    <input id="emp-poste" class="form-input" placeholder="Gérant / Caissier..." />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Salaire de base</label>
+                                    <input id="emp-salaire" class="form-input" placeholder="Ex: 150000" />
+                                </div>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
+                        </div>
+                    </div>
+
+                    <div class="subtab-panel" data-admin-panel="utilisateurs">
+                        <div style="margin-top:12px;">
+                            <div class="actions" style="margin-bottom:12px;">
+                                <button class="btn btn-primary" onclick="testerUtilisateurs()">Lister
+                                    utilisateurs</button>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">Nom</label>
+                                    <input id="usr-nom" class="form-input" placeholder="Nom utilisateur" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    <input id="usr-email" class="form-input" placeholder="email@exemple.com" />
+                                </div>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label class="form-label">Mot de passe</label>
+                                    <input id="usr-password" type="password" class="form-input"
+                                        placeholder="Minimum 6 caractères" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Rôle</label>
+                                    <select id="usr-role" class="form-input">
+                                        <option value="gerant">gerant</option>
+                                        <option value="proprietaire">proprietaire</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">ID employé lié (facultatif)</label>
+                                <input id="usr-employe-id" class="form-input" placeholder="Ex: 1" />
+                            </div>
+
+                            <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l’utilisateur</button>
+                        </div>
+                    </div>
+
+                    <div class="subtab-panel" data-admin-panel="parametres">
+                        <div style="margin-top:12px;">
+                            <div class="section-label">Fond mis à disposition</div>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label class="form-label">Type</label>
+                                    <select id="fmd-type" class="form-input">
+                                        <option value="appro">appro</option>
+                                        <option value="retrait">retrait</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Montant</label>
+                                    <input id="fmd-montant" class="form-input" placeholder="Ex: 200000" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Motif</label>
+                                    <input id="fmd-motif" class="form-input" placeholder="Motif" />
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement
+                                fond</button>
+
+                            <div class="section-label">Mise à jour des fonds MM</div>
+                            <div class="grid-3">
+                                <div class="form-group"><label class="form-label">Orange Revendeur</label><input
+                                        id="mm-orange-rev" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Orange PDV</label><input
+                                        id="mm-orange-pdv" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Wave</label><input id="mm-wave"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">MTN</label><input id="mm-mtn"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Moov</label><input id="mm-moov"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Moov P2</label><input id="mm-moov-p2"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Trésor</label><input id="mm-tresor"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Unités</label><input id="mm-unites"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Espèces</label><input id="mm-especes"
+                                        class="form-input" placeholder="0" /></div>
+                            </div>
+                            <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds
+                                MM</button>
+
+                            <div class="section-label">Paramètres et stock gaz</div>
+                            <div class="grid-3">
+                                <div class="form-group"><label class="form-label">B12 pleines</label><input
+                                        id="gaz-b12-pleines" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B12 vides</label><input
+                                        id="gaz-b12-vides" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B6 pleines</label><input
+                                        id="gaz-b6-pleines" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B6 vides</label><input
+                                        id="gaz-b6-vides" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission B12</label><input
+                                        id="gaz-b12-commission" class="form-input" placeholder="450" /></div>
+                                <div class="form-group"><label class="form-label">Commission B6</label><input
+                                        id="gaz-b6-commission" class="form-input" placeholder="350" /></div>
+                                <div class="form-group"><label class="form-label">Prix vente B12</label><input
+                                        id="gaz-b12-prix" class="form-input" placeholder="4950" /></div>
+                                <div class="form-group"><label class="form-label">Prix vente B6</label><input
+                                        id="gaz-b6-prix" class="form-input" placeholder="1850" /></div>
+                                <div class="form-group"><label class="form-label">Coût recharge B12</label><input
+                                        id="gaz-b12-recharge" class="form-input" placeholder="4950" /></div>
+                                <div class="form-group"><label class="form-label">Coût recharge B6</label><input
+                                        id="gaz-b6-recharge" class="form-input" placeholder="1850" /></div>
+                            </div>
+                            <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
+
+                            <div class="section-label">Console technique</div>
+                            <details class="debug-box">
+                                <summary>Afficher le résultat JSON</summary>
+                                <pre id="sortie">Prêt.</pre>
+                            </details>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <script>
+        const selectClient = document.getElementById('mvt-compte-id');
         const sortie = document.getElementById('sortie');
         const etatSession = document.getElementById('etat-session');
-        const selectClient = document.getElementById('mvt-compte-id');
         let depensesRapport = [];
         let currentUser = null;
 
         function afficher(data) {
+            if (!sortie) return;
             sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         }
 
         function fcfa(value) {
             return `${new Intl.NumberFormat('fr-FR').format(Number(value || 0))} FCFA`;
-        }
-
-        function setCardState(id, state) {
-            const el = document.getElementById(id);
-            el.classList.remove('dash-good', 'dash-bad', 'dash-warn');
-            if (state) el.classList.add(state);
         }
 
         function currentMonth() {
@@ -572,6 +764,54 @@
 
         function currentYear() {
             return String(new Date().getFullYear());
+        }
+
+        function todayISO() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function valeurChamp(id) {
+            return document.getElementById(id).value;
+        }
+
+        function setCardState(id, state) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.classList.remove('dash-good', 'dash-bad', 'dash-warn');
+            if (state) el.classList.add(state);
+        }
+
+        function showMainTab(tab) {
+            document.querySelectorAll('[data-tab-btn]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tabBtn === tab);
+            });
+
+            document.querySelectorAll('[data-tab-panel]').forEach(panel => {
+                panel.classList.toggle('active', panel.dataset.tabPanel === tab);
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function showAdminTab(tab) {
+            document.querySelectorAll('[data-admin-btn]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.adminBtn === tab);
+            });
+
+            document.querySelectorAll('[data-admin-panel]').forEach(panel => {
+                panel.classList.toggle('active', panel.dataset.adminPanel === tab);
+            });
+        }
+
+        function applyRoleVisibility() {
+            const isOwner = currentUser?.role === 'proprietaire';
+            document.querySelectorAll('.owner-only').forEach(el => {
+                el.hidden = !isOwner;
+            });
+
+            if (!isOwner && document.querySelector('[data-tab-panel="admin"]')?.classList.contains('active')) {
+                showMainTab('accueil');
+            }
         }
 
         function renderDashboardCards(data) {
@@ -720,85 +960,6 @@
       `;
         }
 
-        function applyRoleVisibility() {
-            const isOwner = currentUser?.role === 'proprietaire';
-            document.querySelectorAll('.owner-only').forEach(el => {
-                el.hidden = !isOwner;
-            });
-        }
-
-        function valeurChamp(id) {
-            return document.getElementById(id).value;
-        }
-
-        function todayISO() {
-            return new Date().toISOString().slice(0, 10);
-        }
-
-        async function fetchJson(url, options = {}) {
-            const res = await fetch(url, {
-                credentials: 'include',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(options.headers || {})
-                },
-                ...options
-            });
-
-            const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON.' }));
-            return { res, data };
-        }
-
-        async function api(url, options = {}) {
-            const { res, data } = await fetchJson(url, options);
-            afficher(data);
-            return { res, data };
-        }
-
-        async function chargerListeClientsDansSelect() {
-            try {
-                const { data } = await fetchJson('/api/comptes-clients');
-                selectClient.innerHTML = '<option value="">Choisir un client</option>';
-
-                if (Array.isArray(data)) {
-                    data.forEach(client => {
-                        const option = document.createElement('option');
-                        option.value = client.id;
-                        option.textContent = `${client.nom}${client.telephone ? ' - ' + client.telephone : ''}`;
-                        selectClient.appendChild(option);
-                    });
-                }
-            } catch (err) {
-                console.error('Erreur chargement liste clients:', err);
-            }
-        }
-
-        function remplirFormulaireFond(data) {
-            const fond = data.fond_mm || {};
-            const gaz = data.gaz || {};
-
-            document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
-            document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
-            document.getElementById('mm-wave').value = fond.wave ?? 0;
-            document.getElementById('mm-mtn').value = fond.mtn ?? 0;
-            document.getElementById('mm-moov').value = fond.moov ?? 0;
-            document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
-            document.getElementById('mm-tresor').value = fond.tresor ?? 0;
-            document.getElementById('mm-unites').value = fond.unites ?? 0;
-            document.getElementById('mm-especes').value = fond.especes ?? 0;
-
-            document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
-            document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
-            document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
-            document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
-            document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
-            document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
-            document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
-            document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
-            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
-            document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
-        }
-
         function refreshDepensesRapportUI() {
             const bloc = document.getElementById('depenses-liste');
 
@@ -855,6 +1016,26 @@
             refreshDepensesRapportUI();
         }
 
+        async function fetchJson(url, options = {}) {
+            const res = await fetch(url, {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                },
+                ...options
+            });
+
+            const data = await res.json().catch(() => ({ erreur: 'Réponse non JSON.' }));
+            return { res, data };
+        }
+
+        async function api(url, options = {}) {
+            const { res, data } = await fetchJson(url, options);
+            afficher(data);
+            return { res, data };
+        }
+
         async function testerSession() {
             const { res, data } = await api('/api/auth/moi');
             if (res.ok && data.connecte) {
@@ -875,6 +1056,50 @@
         async function chargerEtatFond() {
             const { res, data } = await api('/api/fond');
             if (res.ok) remplirFormulaireFond(data);
+        }
+
+        async function chargerListeClientsDansSelect() {
+            try {
+                const { data } = await fetchJson('/api/comptes-clients');
+                selectClient.innerHTML = '<option value="">Choisir un client</option>';
+
+                if (Array.isArray(data)) {
+                    data.forEach(client => {
+                        const option = document.createElement('option');
+                        option.value = client.id;
+                        option.textContent = `${client.nom}${client.telephone ? ' - ' + client.telephone : ''}`;
+                        selectClient.appendChild(option);
+                    });
+                }
+            } catch (err) {
+                console.error('Erreur chargement liste clients:', err);
+            }
+        }
+
+        function remplirFormulaireFond(data) {
+            const fond = data.fond_mm || {};
+            const gaz = data.gaz || {};
+
+            if (document.getElementById('mm-orange-rev')) document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
+            if (document.getElementById('mm-orange-pdv')) document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
+            if (document.getElementById('mm-wave')) document.getElementById('mm-wave').value = fond.wave ?? 0;
+            if (document.getElementById('mm-mtn')) document.getElementById('mm-mtn').value = fond.mtn ?? 0;
+            if (document.getElementById('mm-moov')) document.getElementById('mm-moov').value = fond.moov ?? 0;
+            if (document.getElementById('mm-moov-p2')) document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
+            if (document.getElementById('mm-tresor')) document.getElementById('mm-tresor').value = fond.tresor ?? 0;
+            if (document.getElementById('mm-unites')) document.getElementById('mm-unites').value = fond.unites ?? 0;
+            if (document.getElementById('mm-especes')) document.getElementById('mm-especes').value = fond.especes ?? 0;
+
+            if (document.getElementById('gaz-b12-pleines')) document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
+            if (document.getElementById('gaz-b12-vides')) document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
+            if (document.getElementById('gaz-b6-pleines')) document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
+            if (document.getElementById('gaz-b6-vides')) document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
+            if (document.getElementById('gaz-b12-commission')) document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
+            if (document.getElementById('gaz-b6-commission')) document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
+            if (document.getElementById('gaz-b12-prix')) document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
+            if (document.getElementById('gaz-b6-prix')) document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
+            if (document.getElementById('gaz-b12-recharge')) document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
+            if (document.getElementById('gaz-b6-recharge')) document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
         async function chargerRapports() {
@@ -922,6 +1147,7 @@
 
             if (res.ok) {
                 await testerDashboard();
+                showMainTab('accueil');
             }
         }
 
@@ -986,6 +1212,7 @@
             await chargerSyntheseAnnuelle();
             afficher({ ok: true, message: 'Salaires du mois enregistrés et résumé actualisé.' });
         }
+
         async function enregistrerCommissionsMm() {
             const mois = valeurChamp('finance-mois').trim();
             if (!mois) {
@@ -1012,6 +1239,7 @@
                 await chargerSyntheseAnnuelle();
             }
         }
+
         async function enregistrerChargesMensuelles() {
             const mois = valeurChamp('finance-mois').trim();
             if (!mois) {
@@ -1039,7 +1267,6 @@
             if (res.ok) {
                 renderFinanceResume(data.resume);
                 remplirChargesMensuelles(data.charges);
-                remplirCommissionsMm(data.commissions_mm || {});
                 await chargerSyntheseAnnuelle();
             }
         }
@@ -1098,6 +1325,21 @@
             await testerDashboard();
         }
 
+        async function testerEmployes() {
+            await api('/api/employes');
+        }
+
+        async function creerEmploye() {
+            await api('/api/employes', {
+                method: 'POST',
+                body: JSON.stringify({
+                    nom: document.getElementById('emp-nom').value,
+                    poste: document.getElementById('emp-poste').value,
+                    salaire_base: document.getElementById('emp-salaire').value
+                })
+            });
+        }
+
         async function testerUtilisateurs() {
             await api('/api/utilisateurs');
         }
@@ -1113,21 +1355,6 @@
                     mot_de_passe: document.getElementById('usr-password').value,
                     role: document.getElementById('usr-role').value,
                     employe_id: employeId ? Number(employeId) : null
-                })
-            });
-        }
-
-        async function testerEmployes() {
-            await api('/api/employes');
-        }
-
-        async function creerEmploye() {
-            await api('/api/employes', {
-                method: 'POST',
-                body: JSON.stringify({
-                    nom: document.getElementById('emp-nom').value,
-                    poste: document.getElementById('emp-poste').value,
-                    salaire_base: document.getElementById('emp-salaire').value
                 })
             });
         }

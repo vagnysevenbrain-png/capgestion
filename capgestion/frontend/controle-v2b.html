@@ -277,6 +277,58 @@
             flex-wrap: wrap;
         }
 
+        .list-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .entity-card {
+            border: 1px solid #DFE8D4;
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .entity-card-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cap-text);
+            margin-bottom: 6px;
+        }
+
+        .entity-card-line {
+            font-size: 12px;
+            color: var(--cap-text-soft);
+            margin-bottom: 4px;
+        }
+
+        .entity-card-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #F3F7EC;
+            color: var(--cap-green-dark);
+            border: 1px solid #DFE8D4;
+        }
+
+        .status-pill.off {
+            background: #FDEDEC;
+            color: #C0392B;
+            border-color: #F3C8C3;
+        }
+
         @media (max-width: 720px) {
             .tabs-wrap {
                 top: 76px;
@@ -292,7 +344,8 @@
             .rapport-mini-grid,
             .rapport-inline-2,
             .rapport-grid-compact,
-            .dep-line-compact {
+            .dep-line-compact,
+            .list-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -301,17 +354,14 @@
                 padding: 8px;
             }
 
-            .rapport-sticky-actions .btn {
+            .rapport-sticky-actions .btn,
+            .admin-block-actions .btn {
                 width: 100%;
                 flex: 1 1 100%;
             }
 
             .rapport-mini-card .mini-value {
                 font-size: 16px;
-            }
-
-            .admin-block-actions .btn {
-                width: 100%;
             }
         }
     </style>
@@ -529,7 +579,9 @@
                         <div class="muted">Gestion terrain des comptes clients</div>
                     </div>
 
-                    <div class="section-label">Créer un compte client</div>
+                    <div class="section-label">Créer / modifier un compte client</div>
+                    <input type="hidden" id="cc-id" />
+
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Nom</label>
@@ -547,9 +599,14 @@
                     </div>
 
                     <div class="admin-block-actions">
-                        <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
-                        <button class="btn" onclick="testerComptesClients()">Rafraîchir la liste</button>
+                        <button class="btn btn-primary" id="btn-save-client"
+                            onclick="creerOuModifierCompteClient()">Créer le compte client</button>
+                        <button class="btn" onclick="resetCompteClientForm()">Réinitialiser</button>
+                        <button class="btn" onclick="testerComptesClients()">Lister les clients</button>
                     </div>
+
+                    <div class="section-label">Liste des clients</div>
+                    <div id="clients-liste" class="muted">Aucune liste chargée.</div>
 
                     <div class="section-label">Ajouter un mouvement</div>
                     <div class="grid-2">
@@ -803,9 +860,8 @@
                     <div class="subtab-panel" data-admin-panel="employes">
                         <div class="admin-block">
                             <div class="admin-block-title">Employés</div>
-                            <div class="actions" style="margin-bottom:12px;">
-                                <button class="btn btn-primary" onclick="testerEmployes()">Lister employés</button>
-                            </div>
+
+                            <input type="hidden" id="emp-id" />
 
                             <div class="grid-3">
                                 <div class="form-group">
@@ -823,8 +879,14 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
+                                <button class="btn btn-primary" id="btn-save-employe"
+                                    onclick="creerOuModifierEmploye()">Créer l’employé</button>
+                                <button class="btn" onclick="resetEmployeForm()">Réinitialiser</button>
+                                <button class="btn" onclick="testerEmployes()">Lister les employés</button>
                             </div>
+
+                            <div class="section-label">Liste des employés</div>
+                            <div id="employes-liste" class="muted">Aucune liste chargée.</div>
                         </div>
                     </div>
 
@@ -979,6 +1041,8 @@
         const etatSession = document.getElementById('etat-session');
         let depensesRapport = [];
         let currentUser = null;
+        let clientsCache = [];
+        let employesCache = [];
 
         function afficher(data) {
             if (!sortie) return;
@@ -1008,6 +1072,15 @@
 
         function rapportNumber(id) {
             return Number(document.getElementById(id)?.value || 0) || 0;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
         }
 
         function setCardState(id, state) {
@@ -1129,7 +1202,7 @@
                 const s = salairesByEmploye[emp.id] || {};
                 return `
           <div class="salary-row-card" data-employe-id="${emp.id}">
-            <div style="font-weight:700; margin-bottom:8px;">${emp.nom} ${emp.poste ? '- ' + emp.poste : ''}</div>
+            <div style="font-weight:700; margin-bottom:8px;">${escapeHtml(emp.nom)} ${emp.poste ? '- ' + escapeHtml(emp.poste) : ''}</div>
             <div class="grid-3">
               <div class="form-group">
                 <label class="form-label">Salaire de base</label>
@@ -1243,7 +1316,7 @@
 
             bloc.innerHTML = depensesRapport.map((dep, index) => `
         <div class="dep-item">
-          <span><strong>${dep.description}</strong> - ${fcfa(dep.montant)}</span>
+          <span><strong>${escapeHtml(dep.description)}</strong> - ${fcfa(dep.montant)}</span>
           <button class="btn btn-sm btn-danger" onclick="supprimerDepense(${index})">Supprimer</button>
         </div>
       `).join('');
@@ -1292,6 +1365,190 @@
             updateRapportSummary();
         }
 
+        function resetCompteClientForm() {
+            document.getElementById('cc-id').value = '';
+            document.getElementById('cc-nom').value = '';
+            document.getElementById('cc-tel').value = '';
+            document.getElementById('cc-obs').value = '';
+            document.getElementById('btn-save-client').textContent = 'Créer le compte client';
+        }
+
+        function chargerClientEdition(index) {
+            const client = clientsCache[index];
+            if (!client) return;
+
+            document.getElementById('cc-id').value = client.id;
+            document.getElementById('cc-nom').value = client.nom || '';
+            document.getElementById('cc-tel').value = client.telephone || '';
+            document.getElementById('cc-obs').value = client.observation || '';
+            document.getElementById('btn-save-client').textContent = 'Modifier le compte client';
+            showMainTab('clients');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderClientsList(clients) {
+            const container = document.getElementById('clients-liste');
+
+            if (!Array.isArray(clients) || !clients.length) {
+                container.innerHTML = '<span class="muted">Aucun client trouvé.</span>';
+                return;
+            }
+
+            clientsCache = clients;
+
+            container.innerHTML = `
+        <div class="list-grid">
+          ${clients.map((client, index) => `
+            <div class="entity-card">
+              <div class="entity-card-title">${escapeHtml(client.nom || 'Client')}</div>
+              <div class="entity-card-line">Téléphone : ${escapeHtml(client.telephone || '-')}</div>
+              <div class="entity-card-line">Observation : ${escapeHtml(client.observation || '-')}</div>
+              <div class="entity-card-line">Solde : ${fcfa(client.solde ?? client.solde_actuel ?? client.solde_courant ?? 0)}</div>
+              <div class="entity-card-line">
+                <span class="status-pill ${client.actif ? '' : 'off'}">${client.actif ? 'Actif' : 'Inactif'}</span>
+              </div>
+              <div class="entity-card-actions">
+                <button class="btn btn-sm" onclick="chargerClientEdition(${index})">Modifier</button>
+                <button class="btn btn-sm" onclick="changerStatutClient(${client.id}, ${client.actif ? 'false' : 'true'})">
+                  ${client.actif ? 'Désactiver' : 'Activer'}
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+        }
+
+        async function creerOuModifierCompteClient() {
+            const id = document.getElementById('cc-id').value.trim();
+            const payload = {
+                nom: document.getElementById('cc-nom').value,
+                telephone: document.getElementById('cc-tel').value,
+                observation: document.getElementById('cc-obs').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/comptes-clients/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/comptes-clients', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetCompteClientForm();
+                await testerComptesClients();
+            }
+        }
+
+        async function changerStatutClient(id, actif) {
+            const { res } = await api(`/api/comptes-clients/${id}/statut`, {
+                method: 'PUT',
+                body: JSON.stringify({ actif })
+            });
+
+            if (res.ok) {
+                await testerComptesClients();
+            }
+        }
+
+        function resetEmployeForm() {
+            document.getElementById('emp-id').value = '';
+            document.getElementById('emp-nom').value = '';
+            document.getElementById('emp-poste').value = '';
+            document.getElementById('emp-salaire').value = '';
+            document.getElementById('btn-save-employe').textContent = 'Créer l’employé';
+        }
+
+        function chargerEmployeEdition(index) {
+            const employe = employesCache[index];
+            if (!employe) return;
+
+            document.getElementById('emp-id').value = employe.id;
+            document.getElementById('emp-nom').value = employe.nom || '';
+            document.getElementById('emp-poste').value = employe.poste || '';
+            document.getElementById('emp-salaire').value = employe.salaire_base || 0;
+            document.getElementById('btn-save-employe').textContent = 'Modifier l’employé';
+            showMainTab('admin');
+            showAdminTab('employes');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderEmployesList(employes) {
+            const container = document.getElementById('employes-liste');
+
+            if (!Array.isArray(employes) || !employes.length) {
+                container.innerHTML = '<span class="muted">Aucun employé trouvé.</span>';
+                return;
+            }
+
+            employesCache = employes;
+
+            container.innerHTML = `
+        <div class="list-grid">
+          ${employes.map((employe, index) => `
+            <div class="entity-card">
+              <div class="entity-card-title">${escapeHtml(employe.nom || 'Employé')}</div>
+              <div class="entity-card-line">Poste : ${escapeHtml(employe.poste || '-')}</div>
+              <div class="entity-card-line">Salaire de base : ${fcfa(employe.salaire_base || 0)}</div>
+              <div class="entity-card-line">
+                <span class="status-pill ${employe.actif ? '' : 'off'}">${employe.actif ? 'Actif' : 'Inactif'}</span>
+              </div>
+              <div class="entity-card-actions">
+                <button class="btn btn-sm" onclick="chargerEmployeEdition(${index})">Modifier</button>
+                <button class="btn btn-sm" onclick="changerStatutEmploye(${employe.id}, ${employe.actif ? 'false' : 'true'})">
+                  ${employe.actif ? 'Désactiver' : 'Activer'}
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+        }
+
+        async function creerOuModifierEmploye() {
+            const id = document.getElementById('emp-id').value.trim();
+            const payload = {
+                nom: document.getElementById('emp-nom').value,
+                poste: document.getElementById('emp-poste').value,
+                salaire_base: document.getElementById('emp-salaire').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/employes/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/employes', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetEmployeForm();
+                await testerEmployes();
+            }
+        }
+
+        async function changerStatutEmploye(id, actif) {
+            const { res } = await api(`/api/employes/${id}/statut`, {
+                method: 'PUT',
+                body: JSON.stringify({ actif })
+            });
+
+            if (res.ok) {
+                await testerEmployes();
+            }
+        }
+
         async function fetchJson(url, options = {}) {
             const res = await fetch(url, {
                 credentials: 'include',
@@ -1327,6 +1584,32 @@
             const { res, data } = await api('/api/dashboard');
             etatSession.textContent = res.ok ? 'Dashboard OK' : 'Dashboard KO';
             if (res.ok) renderDashboardCards(data);
+        }
+
+        function remplirFormulaireFond(data) {
+            const fond = data.fond_mm || {};
+            const gaz = data.gaz || {};
+
+            if (document.getElementById('mm-orange-rev')) document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
+            if (document.getElementById('mm-orange-pdv')) document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
+            if (document.getElementById('mm-wave')) document.getElementById('mm-wave').value = fond.wave ?? 0;
+            if (document.getElementById('mm-mtn')) document.getElementById('mm-mtn').value = fond.mtn ?? 0;
+            if (document.getElementById('mm-moov')) document.getElementById('mm-moov').value = fond.moov ?? 0;
+            if (document.getElementById('mm-moov-p2')) document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
+            if (document.getElementById('mm-tresor')) document.getElementById('mm-tresor').value = fond.tresor ?? 0;
+            if (document.getElementById('mm-unites')) document.getElementById('mm-unites').value = fond.unites ?? 0;
+            if (document.getElementById('mm-especes')) document.getElementById('mm-especes').value = fond.especes ?? 0;
+
+            if (document.getElementById('gaz-b12-pleines')) document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
+            if (document.getElementById('gaz-b12-vides')) document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
+            if (document.getElementById('gaz-b6-pleines')) document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
+            if (document.getElementById('gaz-b6-vides')) document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
+            if (document.getElementById('gaz-b12-commission')) document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
+            if (document.getElementById('gaz-b6-commission')) document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
+            if (document.getElementById('gaz-b12-prix')) document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
+            if (document.getElementById('gaz-b6-prix')) document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
+            if (document.getElementById('gaz-b12-recharge')) document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
+            if (document.getElementById('gaz-b6-recharge')) document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
         async function chargerEtatFond() {
@@ -1533,26 +1816,15 @@
         }
 
         async function testerComptesClients() {
-            await api('/api/comptes-clients');
-            await chargerListeClientsDansSelect();
+            const { res, data } = await api('/api/comptes-clients');
+            if (res.ok) {
+                renderClientsList(data);
+                await chargerListeClientsDansSelect();
+            }
         }
 
         async function creerCompteClient() {
-            const { res } = await api('/api/comptes-clients', {
-                method: 'POST',
-                body: JSON.stringify({
-                    nom: document.getElementById('cc-nom').value,
-                    telephone: document.getElementById('cc-tel').value,
-                    observation: document.getElementById('cc-obs').value
-                })
-            });
-
-            if (res.ok) {
-                document.getElementById('cc-nom').value = '';
-                document.getElementById('cc-tel').value = '';
-                document.getElementById('cc-obs').value = '';
-                await chargerListeClientsDansSelect();
-            }
+            await creerOuModifierCompteClient();
         }
 
         async function ajouterMouvementCompte() {
@@ -1576,18 +1848,14 @@
         }
 
         async function testerEmployes() {
-            await api('/api/employes');
+            const { res, data } = await api('/api/employes');
+            if (res.ok) {
+                renderEmployesList(data);
+            }
         }
 
         async function creerEmploye() {
-            await api('/api/employes', {
-                method: 'POST',
-                body: JSON.stringify({
-                    nom: document.getElementById('emp-nom').value,
-                    poste: document.getElementById('emp-poste').value,
-                    salaire_base: document.getElementById('emp-salaire').value
-                })
-            });
+            await creerOuModifierEmploye();
         }
 
         async function testerUtilisateurs() {
@@ -1680,6 +1948,8 @@
             refreshDepensesRapportUI();
             bindRapportCompactInputs();
             updateRapportSummary();
+            resetCompteClientForm();
+            resetEmployeForm();
 
             await chargerListeClientsDansSelect();
             await testerSession();

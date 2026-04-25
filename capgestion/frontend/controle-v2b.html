@@ -84,6 +84,10 @@
             font-size: 12px;
         }
 
+        .owner-only[hidden] {
+            display: none !important;
+        }
+
         .finance-table {
             width: 100%;
             border-collapse: collapse;
@@ -112,10 +116,6 @@
             margin-bottom: 10px;
         }
 
-        .owner-only[hidden] {
-            display: none !important;
-        }
-
         details.debug-box {
             border: 1px solid #DFE8D4;
             border-radius: 14px;
@@ -142,6 +142,141 @@
             margin-top: 10px;
         }
 
+        .rapport-compact-top {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .rapport-mini-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .rapport-mini-card {
+            border: 1px solid #DFE8D4;
+            border-radius: 14px;
+            background: #FCFDF9;
+            padding: 12px;
+        }
+
+        .rapport-mini-card .mini-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--cap-text-soft);
+            margin-bottom: 6px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        .rapport-mini-card .mini-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--cap-text);
+        }
+
+        .rapport-grid-compact {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .rapport-grid-compact .form-group {
+            margin-bottom: 0;
+        }
+
+        .rapport-grid-compact .form-label {
+            font-size: 12px;
+        }
+
+        .rapport-grid-compact .form-input {
+            min-height: 42px;
+            padding: 8px 10px;
+        }
+
+        .rapport-block {
+            border: 1px solid #DFE8D4;
+            border-radius: 16px;
+            background: #FCFDF9;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .rapport-block-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--cap-green-dark);
+            margin-bottom: 10px;
+        }
+
+        .rapport-inline-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .rapport-sticky-actions {
+            position: sticky;
+            bottom: 10px;
+            z-index: 20;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 10px;
+            border: 1px solid #DFE8D4;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 24px rgba(34, 46, 38, 0.08);
+            margin-top: 12px;
+        }
+
+        .rapport-sticky-actions .btn {
+            flex: 1 1 180px;
+        }
+
+        .dep-line-compact {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #depenses-liste .dep-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            border: 1px solid #DFE8D4;
+            border-radius: 12px;
+            background: #fff;
+            padding: 8px 10px;
+            margin-top: 8px;
+        }
+
+        .admin-block {
+            border: 1px solid #DFE8D4;
+            border-radius: 16px;
+            background: #FCFDF9;
+            padding: 14px;
+            margin-top: 12px;
+        }
+
+        .admin-block-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--cap-green-dark);
+            margin-bottom: 12px;
+        }
+
+        .admin-block-actions {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         @media (max-width: 720px) {
             .tabs-wrap {
                 top: 76px;
@@ -152,6 +287,31 @@
             .subtab-btn {
                 padding: 10px 12px;
                 font-size: 12px;
+            }
+
+            .rapport-mini-grid,
+            .rapport-inline-2,
+            .rapport-grid-compact,
+            .dep-line-compact {
+                grid-template-columns: 1fr;
+            }
+
+            .rapport-sticky-actions {
+                bottom: 6px;
+                padding: 8px;
+            }
+
+            .rapport-sticky-actions .btn {
+                width: 100%;
+                flex: 1 1 100%;
+            }
+
+            .rapport-mini-card .mini-value {
+                font-size: 16px;
+            }
+
+            .admin-block-actions .btn {
+                width: 100%;
             }
         }
     </style>
@@ -174,7 +334,7 @@
     </div>
 
     <div class="tabs-wrap">
-        <div class="tab-strip" id="main-tab-strip">
+        <div class="tab-strip">
             <button class="tab-btn active" data-tab-btn="accueil" onclick="showMainTab('accueil')">Accueil</button>
             <button class="tab-btn" data-tab-btn="rapport" onclick="showMainTab('rapport')">Rapport du jour</button>
             <button class="tab-btn" data-tab-btn="clients" onclick="showMainTab('clients')">Clients / crédits</button>
@@ -257,81 +417,102 @@
                 <div class="card">
                     <div class="panel-title-row">
                         <div class="card-title" style="margin-bottom:0;">Rapport du jour</div>
-                        <div class="muted">Saisie opérationnelle quotidienne</div>
+                        <div class="muted">Version compacte smartphone</div>
                     </div>
 
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Date du rapport</label>
-                            <input id="r-date" type="date" class="form-input" />
+                    <div class="rapport-compact-top">
+                        <div class="rapport-inline-2">
+                            <div class="form-group">
+                                <label class="form-label">Date du rapport</label>
+                                <input id="r-date" type="date" class="form-input" />
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Observation</label>
+                                <input id="r-observation" class="form-input" placeholder="Observation générale" />
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Observation</label>
-                            <input id="r-observation" class="form-input" placeholder="Observation générale" />
-                        </div>
-                    </div>
 
-                    <div class="section-label">Soldes Mobile Money / caisse</div>
-                    <div class="grid-3">
-                        <div class="form-group"><label class="form-label">Orange Revendeur</label><input
-                                id="r-orange-rev" class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Wave</label><input id="r-wave"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Moov</label><input id="r-moov"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">Unités</label><input id="r-unites"
-                                class="form-input" placeholder="0" /></div>
-                    </div>
-
-                    <div class="section-label">Gaz</div>
-                    <div class="grid-3">
-                        <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
-                                class="form-input" placeholder="0" /></div>
-                        <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f"
-                                class="form-input" placeholder="0" /></div>
-                    </div>
-
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Caisse gaz disponible</label>
-                            <input id="r-caisse-gaz-disponible" class="form-input"
-                                placeholder="Montant réel en caisse gaz" />
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Indication</label>
-                            <div class="form-input muted" style="min-height:42px; display:flex; align-items:center;">
-                                Ce montant sera comparé à la caisse théorique gaz dans l’accueil.
+                        <div class="rapport-mini-grid">
+                            <div class="rapport-mini-card">
+                                <div class="mini-label">Total soldes saisis</div>
+                                <div class="mini-value" id="rapport-total-soldes">0 FCFA</div>
+                            </div>
+                            <div class="rapport-mini-card">
+                                <div class="mini-label">Gaz vendu aujourd’hui</div>
+                                <div class="mini-value" id="rapport-total-gaz-vendu">0 bouteille</div>
+                            </div>
+                            <div class="rapport-mini-card">
+                                <div class="mini-label">Caisse gaz disponible</div>
+                                <div class="mini-value" id="rapport-caisse-gaz">0 FCFA</div>
+                            </div>
+                            <div class="rapport-mini-card">
+                                <div class="mini-label">Dépenses ajoutées</div>
+                                <div class="mini-value" id="rapport-total-depenses">0 FCFA</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="section-label">Dépenses du jour</div>
-                    <div class="dep-line">
-                        <input id="dep-description" class="form-input" placeholder="Description dépense" />
-                        <input id="dep-montant" class="form-input" placeholder="Montant" />
-                        <button class="btn" onclick="ajouterDepense()">Ajouter dépense</button>
+                    <div class="rapport-block">
+                        <div class="rapport-block-title">Mobile Money / caisse</div>
+                        <div class="rapport-grid-compact">
+                            <div class="form-group"><label class="form-label">Orange Revendeur</label><input
+                                    id="r-orange-rev" class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Wave</label><input id="r-wave"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Moov</label><input id="r-moov"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">Unités</label><input id="r-unites"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                        </div>
                     </div>
-                    <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
 
-                    <div class="actions" style="margin-top:14px;">
+                    <div class="rapport-block">
+                        <div class="rapport-block-title">Gaz</div>
+                        <div class="rapport-grid-compact">
+                            <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                            <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f"
+                                    class="form-input rapport-watch" placeholder="0" /></div>
+                        </div>
+
+                        <div style="margin-top:10px;">
+                            <div class="form-group">
+                                <label class="form-label">Caisse gaz disponible</label>
+                                <input id="r-caisse-gaz-disponible" class="form-input rapport-watch"
+                                    placeholder="Montant réel en caisse gaz" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rapport-block">
+                        <div class="rapport-block-title">Dépenses du jour</div>
+                        <div class="dep-line-compact">
+                            <input id="dep-description" class="form-input" placeholder="Description dépense" />
+                            <input id="dep-montant" class="form-input" placeholder="Montant" />
+                            <button class="btn" onclick="ajouterDepense()">Ajouter</button>
+                        </div>
+                        <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
+                    </div>
+
+                    <div class="rapport-sticky-actions">
                         <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
                         <button class="btn" onclick="reinitialiserRapport()">Réinitialiser</button>
                         <button class="btn" onclick="showMainTab('accueil')">Retour accueil</button>
@@ -359,11 +540,16 @@
                             <input id="cc-tel" class="form-input" placeholder="0700000000" />
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label class="form-label">Observation</label>
                         <textarea id="cc-obs" class="form-input" placeholder="Observation"></textarea>
                     </div>
-                    <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
+
+                    <div class="admin-block-actions">
+                        <button class="btn btn-primary" onclick="creerCompteClient()">Créer le compte client</button>
+                        <button class="btn" onclick="testerComptesClients()">Rafraîchir la liste</button>
+                    </div>
 
                     <div class="section-label">Ajouter un mouvement</div>
                     <div class="grid-2">
@@ -405,9 +591,8 @@
                         <textarea id="mvt-note" class="form-input" placeholder="Motif du mouvement"></textarea>
                     </div>
 
-                    <div class="actions">
+                    <div class="admin-block-actions">
                         <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
-                        <button class="btn" onclick="testerComptesClients()">Rafraîchir la liste</button>
                     </div>
                 </div>
             </div>
@@ -447,7 +632,7 @@
                         <div class="muted">Visible uniquement pour le propriétaire</div>
                     </div>
 
-                    <div class="subtab-strip" id="admin-subtab-strip">
+                    <div class="subtab-strip">
                         <button class="subtab-btn active" data-admin-btn="finance"
                             onclick="showAdminTab('finance')">Finance</button>
                         <button class="subtab-btn" data-admin-btn="employes"
@@ -459,7 +644,7 @@
                     </div>
 
                     <div class="subtab-panel active" data-admin-panel="finance">
-                        <div class="grid-2" style="margin-top:12px;">
+                        <div style="margin-top:12px;" class="grid-2">
                             <div class="form-group">
                                 <label class="form-label">Mois de travail (YYYY-MM)</label>
                                 <input id="finance-mois" class="form-input" placeholder="2026-04" />
@@ -470,128 +655,154 @@
                             </div>
                         </div>
 
-                        <div class="actions" style="margin-bottom:14px;">
-                            <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du
-                                mois</button>
-                            <button class="btn" onclick="enregistrerTousSalairesMois()">Enregistrer salaires du
-                                mois</button>
-                            <button class="btn" onclick="enregistrerCommissionsMm()">Enregistrer commissions MM</button>
-                            <button class="btn" onclick="enregistrerChargesMensuelles()">Enregistrer charges
-                                mensuelles</button>
-                            <button class="btn" onclick="chargerSyntheseAnnuelle()">Charger synthèse annuelle</button>
-                        </div>
+                        <div class="admin-block">
+                            <div class="admin-block-title">Résumé mensuel</div>
+                            <div class="dashboard-grid">
+                                <div class="dash-card">
+                                    <div class="dash-label">Gain MM</div>
+                                    <div class="dash-value" id="fin-gain-mm">0 FCFA</div>
+                                </div>
+                                <div class="dash-card">
+                                    <div class="dash-label">Gain gaz</div>
+                                    <div class="dash-value" id="fin-gain-gaz">0 FCFA</div>
+                                </div>
+                                <div class="dash-card">
+                                    <div class="dash-label">Salaires</div>
+                                    <div class="dash-value" id="fin-salaires">0 FCFA</div>
+                                </div>
+                                <div class="dash-card">
+                                    <div class="dash-label">Autres charges</div>
+                                    <div class="dash-value" id="fin-autres-charges">0 FCFA</div>
+                                </div>
+                                <div class="dash-card">
+                                    <div class="dash-label">Total charges</div>
+                                    <div class="dash-value" id="fin-total-charges">0 FCFA</div>
+                                </div>
+                                <div class="dash-card" id="fin-card-benefice">
+                                    <div class="dash-label">Bénéfice net</div>
+                                    <div class="dash-value" id="fin-benefice">0 FCFA</div>
+                                </div>
+                            </div>
 
-                        <div class="section-label">Résumé mensuel</div>
-                        <div class="dashboard-grid">
-                            <div class="dash-card">
-                                <div class="dash-label">Gain MM</div>
-                                <div class="dash-value" id="fin-gain-mm">0 FCFA</div>
-                            </div>
-                            <div class="dash-card">
-                                <div class="dash-label">Gain gaz</div>
-                                <div class="dash-value" id="fin-gain-gaz">0 FCFA</div>
-                            </div>
-                            <div class="dash-card">
-                                <div class="dash-label">Salaires</div>
-                                <div class="dash-value" id="fin-salaires">0 FCFA</div>
-                            </div>
-                            <div class="dash-card">
-                                <div class="dash-label">Autres charges</div>
-                                <div class="dash-value" id="fin-autres-charges">0 FCFA</div>
-                            </div>
-                            <div class="dash-card">
-                                <div class="dash-label">Total charges</div>
-                                <div class="dash-value" id="fin-total-charges">0 FCFA</div>
-                            </div>
-                            <div class="dash-card" id="fin-card-benefice">
-                                <div class="dash-label">Bénéfice net</div>
-                                <div class="dash-value" id="fin-benefice">0 FCFA</div>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du
+                                    mois</button>
                             </div>
                         </div>
 
-                        <div class="section-label">Commissions mobile money du mois</div>
-                        <div class="grid-3">
-                            <div class="form-group">
-                                <label class="form-label">Commission Orange</label>
-                                <input id="mmc-orange" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Commission Wave</label>
-                                <input id="mmc-wave" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Commission MTN</label>
-                                <input id="mmc-mtn" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Commission Moov</label>
-                                <input id="mmc-moov" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Commission Trésor</label>
-                                <input id="mmc-tresor" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Commission Unités</label>
-                                <input id="mmc-unites" class="form-input" placeholder="0" />
+                        <div class="admin-block">
+                            <div class="admin-block-title">Salaires du mois</div>
+                            <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="enregistrerTousSalairesMois()">Enregistrer
+                                    salaires du mois</button>
                             </div>
                         </div>
 
-                        <div class="section-label">Salaires du mois</div>
-                        <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
+                        <div class="admin-block">
+                            <div class="admin-block-title">Commissions mobile money du mois</div>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label class="form-label">Commission Orange</label>
+                                    <input id="mmc-orange" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Commission Wave</label>
+                                    <input id="mmc-wave" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Commission MTN</label>
+                                    <input id="mmc-mtn" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Commission Moov</label>
+                                    <input id="mmc-moov" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Commission Trésor</label>
+                                    <input id="mmc-tresor" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Commission Unités</label>
+                                    <input id="mmc-unites" class="form-input" placeholder="0" />
+                                </div>
+                            </div>
 
-                        <div class="section-label">Charges mensuelles</div>
-                        <div class="grid-3">
-                            <div class="form-group">
-                                <label class="form-label">Loyer magasin principal</label>
-                                <input id="ch-loyer-principal" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Loyer magasin gaz</label>
-                                <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Eau / Électricité</label>
-                                <input id="ch-eau-elec" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Téléphone / Internet</label>
-                                <input id="ch-tel-internet" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Carburant</label>
-                                <input id="ch-carburant" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Taxe mairie</label>
-                                <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Photocopie</label>
-                                <input id="ch-photocopie" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Tontine</label>
-                                <input id="ch-tontine" class="form-input" placeholder="0" />
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Autre variable</label>
-                                <input id="ch-autre-variable" class="form-input" placeholder="0" />
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="enregistrerCommissionsMm()">Enregistrer
+                                    commissions MM</button>
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label class="form-label">Commentaire autre variable</label>
-                            <textarea id="ch-commentaire" class="form-input"
-                                placeholder="Précision sur les charges variables"></textarea>
+                        <div class="admin-block">
+                            <div class="admin-block-title">Charges mensuelles</div>
+                            <div class="grid-3">
+                                <div class="form-group">
+                                    <label class="form-label">Loyer magasin principal</label>
+                                    <input id="ch-loyer-principal" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Loyer magasin gaz</label>
+                                    <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Eau / Électricité</label>
+                                    <input id="ch-eau-elec" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Téléphone / Internet</label>
+                                    <input id="ch-tel-internet" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Carburant</label>
+                                    <input id="ch-carburant" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Taxe mairie</label>
+                                    <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Photocopie</label>
+                                    <input id="ch-photocopie" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Tontine</label>
+                                    <input id="ch-tontine" class="form-input" placeholder="0" />
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Autre variable</label>
+                                    <input id="ch-autre-variable" class="form-input" placeholder="0" />
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Commentaire autre variable</label>
+                                <textarea id="ch-commentaire" class="form-input"
+                                    placeholder="Précision sur les charges variables"></textarea>
+                            </div>
+
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="enregistrerChargesMensuelles()">Enregistrer
+                                    charges mensuelles</button>
+                            </div>
                         </div>
 
-                        <div class="section-label">Synthèse annuelle</div>
-                        <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.</div>
+                        <div class="admin-block">
+                            <div class="admin-block-title">Synthèse annuelle</div>
+
+                            <div class="admin-block-actions" style="margin-top:0; margin-bottom:8px;">
+                                <button class="btn btn-primary" onclick="chargerSyntheseAnnuelle()">Charger synthèse
+                                    annuelle</button>
+                            </div>
+
+                            <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.
+                            </div>
+                        </div>
                     </div>
 
                     <div class="subtab-panel" data-admin-panel="employes">
-                        <div style="margin-top:12px;">
+                        <div class="admin-block">
+                            <div class="admin-block-title">Employés</div>
                             <div class="actions" style="margin-bottom:12px;">
                                 <button class="btn btn-primary" onclick="testerEmployes()">Lister employés</button>
                             </div>
@@ -611,12 +822,15 @@
                                 </div>
                             </div>
 
-                            <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="creerEmploye()">Créer l’employé</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="subtab-panel" data-admin-panel="utilisateurs">
-                        <div style="margin-top:12px;">
+                        <div class="admin-block">
+                            <div class="admin-block-title">Utilisateurs</div>
                             <div class="actions" style="margin-bottom:12px;">
                                 <button class="btn btn-primary" onclick="testerUtilisateurs()">Lister
                                     utilisateurs</button>
@@ -653,13 +867,16 @@
                                 <input id="usr-employe-id" class="form-input" placeholder="Ex: 1" />
                             </div>
 
-                            <button class="btn btn-primary" onclick="creerUtilisateur()">Créer l’utilisateur</button>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="creerUtilisateur()">Créer
+                                    l’utilisateur</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="subtab-panel" data-admin-panel="parametres">
-                        <div style="margin-top:12px;">
-                            <div class="section-label">Fond mis à disposition</div>
+                        <div class="admin-block">
+                            <div class="admin-block-title">Fond mis à disposition</div>
                             <div class="grid-3">
                                 <div class="form-group">
                                     <label class="form-label">Type</label>
@@ -677,10 +894,15 @@
                                     <input id="fmd-motif" class="form-input" placeholder="Motif" />
                                 </div>
                             </div>
-                            <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement
-                                fond</button>
 
-                            <div class="section-label">Mise à jour des fonds MM</div>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement
+                                    fond</button>
+                            </div>
+                        </div>
+
+                        <div class="admin-block">
+                            <div class="admin-block-title">Mise à jour des fonds MM</div>
                             <div class="grid-3">
                                 <div class="form-group"><label class="form-label">Orange Revendeur</label><input
                                         id="mm-orange-rev" class="form-input" placeholder="0" /></div>
@@ -701,10 +923,15 @@
                                 <div class="form-group"><label class="form-label">Espèces</label><input id="mm-especes"
                                         class="form-input" placeholder="0" /></div>
                             </div>
-                            <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds
-                                MM</button>
 
-                            <div class="section-label">Paramètres et stock gaz</div>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds
+                                    MM</button>
+                            </div>
+                        </div>
+
+                        <div class="admin-block">
+                            <div class="admin-block-title">Paramètres et stock gaz</div>
                             <div class="grid-3">
                                 <div class="form-group"><label class="form-label">B12 pleines</label><input
                                         id="gaz-b12-pleines" class="form-input" placeholder="0" /></div>
@@ -727,9 +954,14 @@
                                 <div class="form-group"><label class="form-label">Coût recharge B6</label><input
                                         id="gaz-b6-recharge" class="form-input" placeholder="1850" /></div>
                             </div>
-                            <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
 
-                            <div class="section-label">Console technique</div>
+                            <div class="admin-block-actions">
+                                <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
+                            </div>
+                        </div>
+
+                        <div class="admin-block">
+                            <div class="admin-block-title">Console technique</div>
                             <details class="debug-box">
                                 <summary>Afficher le résultat JSON</summary>
                                 <pre id="sortie">Prêt.</pre>
@@ -772,6 +1004,10 @@
 
         function valeurChamp(id) {
             return document.getElementById(id).value;
+        }
+
+        function rapportNumber(id) {
+            return Number(document.getElementById(id)?.value || 0) || 0;
         }
 
         function setCardState(id, state) {
@@ -960,20 +1196,59 @@
       `;
         }
 
+        function updateRapportSummary() {
+            const totalSoldes =
+                rapportNumber('r-orange-rev') +
+                rapportNumber('r-orange-pdv') +
+                rapportNumber('r-wave') +
+                rapportNumber('r-mtn') +
+                rapportNumber('r-moov') +
+                rapportNumber('r-moov-p2') +
+                rapportNumber('r-tresor') +
+                rapportNumber('r-especes') +
+                rapportNumber('r-unites');
+
+            const totalGazVendu =
+                rapportNumber('r-b12v') +
+                rapportNumber('r-b6v');
+
+            const caisseGaz = rapportNumber('r-caisse-gaz-disponible');
+            const totalDepenses = depensesRapport.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
+
+            const totalSoldesEl = document.getElementById('rapport-total-soldes');
+            const totalGazEl = document.getElementById('rapport-total-gaz-vendu');
+            const caisseGazEl = document.getElementById('rapport-caisse-gaz');
+            const totalDepensesEl = document.getElementById('rapport-total-depenses');
+
+            if (totalSoldesEl) totalSoldesEl.textContent = fcfa(totalSoldes);
+            if (totalGazEl) totalGazEl.textContent = `${totalGazVendu} bouteille`;
+            if (caisseGazEl) caisseGazEl.textContent = fcfa(caisseGaz);
+            if (totalDepensesEl) totalDepensesEl.textContent = fcfa(totalDepenses);
+        }
+
+        function bindRapportCompactInputs() {
+            document.querySelectorAll('.rapport-watch').forEach(input => {
+                input.addEventListener('input', updateRapportSummary);
+            });
+        }
+
         function refreshDepensesRapportUI() {
             const bloc = document.getElementById('depenses-liste');
 
             if (!depensesRapport.length) {
                 bloc.innerHTML = '<span class="muted">Aucune dépense ajoutée.</span>';
+                updateRapportSummary();
                 return;
             }
 
             bloc.innerHTML = depensesRapport.map((dep, index) => `
-        <div class="dep-line">
-          <span><strong>${dep.description}</strong> - ${dep.montant}</span>
+        <div class="dep-item">
+          <span><strong>${dep.description}</strong> - ${fcfa(dep.montant)}</span>
           <button class="btn btn-sm btn-danger" onclick="supprimerDepense(${index})">Supprimer</button>
         </div>
       `).join('');
+
+            updateRapportSummary();
         }
 
         function ajouterDepense() {
@@ -1014,6 +1289,7 @@
 
             depensesRapport = [];
             refreshDepensesRapportUI();
+            updateRapportSummary();
         }
 
         async function fetchJson(url, options = {}) {
@@ -1074,32 +1350,6 @@
             } catch (err) {
                 console.error('Erreur chargement liste clients:', err);
             }
-        }
-
-        function remplirFormulaireFond(data) {
-            const fond = data.fond_mm || {};
-            const gaz = data.gaz || {};
-
-            if (document.getElementById('mm-orange-rev')) document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
-            if (document.getElementById('mm-orange-pdv')) document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
-            if (document.getElementById('mm-wave')) document.getElementById('mm-wave').value = fond.wave ?? 0;
-            if (document.getElementById('mm-mtn')) document.getElementById('mm-mtn').value = fond.mtn ?? 0;
-            if (document.getElementById('mm-moov')) document.getElementById('mm-moov').value = fond.moov ?? 0;
-            if (document.getElementById('mm-moov-p2')) document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
-            if (document.getElementById('mm-tresor')) document.getElementById('mm-tresor').value = fond.tresor ?? 0;
-            if (document.getElementById('mm-unites')) document.getElementById('mm-unites').value = fond.unites ?? 0;
-            if (document.getElementById('mm-especes')) document.getElementById('mm-especes').value = fond.especes ?? 0;
-
-            if (document.getElementById('gaz-b12-pleines')) document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
-            if (document.getElementById('gaz-b12-vides')) document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
-            if (document.getElementById('gaz-b6-pleines')) document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
-            if (document.getElementById('gaz-b6-vides')) document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
-            if (document.getElementById('gaz-b12-commission')) document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
-            if (document.getElementById('gaz-b6-commission')) document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
-            if (document.getElementById('gaz-b12-prix')) document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
-            if (document.getElementById('gaz-b6-prix')) document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
-            if (document.getElementById('gaz-b12-recharge')) document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
-            if (document.getElementById('gaz-b6-recharge')) document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
         async function chargerRapports() {
@@ -1428,6 +1678,9 @@
             document.getElementById('hist-mois').value = currentMonth();
 
             refreshDepensesRapportUI();
+            bindRapportCompactInputs();
+            updateRapportSummary();
+
             await chargerListeClientsDansSelect();
             await testerSession();
             await chargerEtatFond();

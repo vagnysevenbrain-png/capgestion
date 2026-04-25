@@ -253,6 +253,7 @@
             <div class="actions" style="margin-bottom: 14px;">
                 <button class="btn btn-primary" onclick="chargerFinanceMois()">Charger finance du mois</button>
                 <button class="btn" onclick="enregistrerTousSalairesMois()">Enregistrer salaires du mois</button>
+                <button class="btn" onclick="enregistrerCommissionsMm()">Enregistrer commissions MM</button>
                 <button class="btn" onclick="enregistrerChargesMensuelles()">Enregistrer charges mensuelles</button>
                 <button class="btn" onclick="chargerSyntheseAnnuelle()">Charger synthèse annuelle</button>
             </div>
@@ -985,7 +986,32 @@
             await chargerSyntheseAnnuelle();
             afficher({ ok: true, message: 'Salaires du mois enregistrés et résumé actualisé.' });
         }
+        async function enregistrerCommissionsMm() {
+            const mois = valeurChamp('finance-mois').trim();
+            if (!mois) {
+                afficher({ erreur: 'Renseigne le mois finance.' });
+                return;
+            }
 
+            const { res, data } = await api('/api/charges/commissions-mm', {
+                method: 'POST',
+                body: JSON.stringify({
+                    mois,
+                    commission_orange: valeurChamp('mmc-orange'),
+                    commission_wave: valeurChamp('mmc-wave'),
+                    commission_mtn: valeurChamp('mmc-mtn'),
+                    commission_moov: valeurChamp('mmc-moov'),
+                    commission_tresor: valeurChamp('mmc-tresor'),
+                    commission_unites: valeurChamp('mmc-unites')
+                })
+            });
+
+            if (res.ok) {
+                renderFinanceResume(data.resume);
+                remplirCommissionsMm(data.commissions_mm || {});
+                await chargerSyntheseAnnuelle();
+            }
+        }
         async function enregistrerChargesMensuelles() {
             const mois = valeurChamp('finance-mois').trim();
             if (!mois) {
@@ -997,12 +1023,6 @@
                 method: 'POST',
                 body: JSON.stringify({
                     mois,
-                    commission_orange: valeurChamp('mmc-orange'),
-                    commission_wave: valeurChamp('mmc-wave'),
-                    commission_mtn: valeurChamp('mmc-mtn'),
-                    commission_moov: valeurChamp('mmc-moov'),
-                    commission_tresor: valeurChamp('mmc-tresor'),
-                    commission_unites: valeurChamp('mmc-unites'),
                     loyer_magasin_principal: valeurChamp('ch-loyer-principal'),
                     loyer_magasin_gaz: valeurChamp('ch-loyer-gaz'),
                     eau_electricite: valeurChamp('ch-eau-elec'),

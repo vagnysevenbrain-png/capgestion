@@ -74,12 +74,30 @@ async function getChargesRow(siteId, moisDate) {
       sodeci_cie,
       autres_variables,
       commentaire_autres_variables,
-      impots,
-      cnps,
-      aide_magasin,
-      bonus,
       updated_at
     FROM charges
+    WHERE site_id = $1
+      AND mois = $2
+    `,
+    [siteId, moisDate]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getMmMensuelRow(siteId, moisDate) {
+  const result = await db.query(
+    `
+    SELECT
+      site_id,
+      mois,
+      orange_total,
+      wave,
+      mtn,
+      moov,
+      tresor,
+      unites
+    FROM mm_mensuel
     WHERE site_id = $1
       AND mois = $2
     `,
@@ -105,24 +123,44 @@ function getAutresChargesFromRow(row) {
   );
 }
 
-async function getGainMmMois(siteId, moisDate) {
-  const result = await db.query(
-    `
-    SELECT
-      COALESCE(orange_total, 0) +
-      COALESCE(wave, 0) +
-      COALESCE(mtn, 0) +
-      COALESCE(moov, 0) +
-      COALESCE(tresor, 0) +
-      COALESCE(unites, 0) AS gain_mm
-    FROM mm_mensuel
-    WHERE site_id = $1
-      AND mois = $2
-    `,
-    [siteId, moisDate]
-  );
+function mapChargesToFinance(row, totalSalaires = 0) {
+  return {
+    salaires: totalSalaires,
+    loyer_magasin_principal: Number(row?.loyer_local || 0),
+    loyer_magasin_gaz: Number(row?.loyer_terrain || 0),
+    eau_electricite: Number(row?.sodeci_cie || 0),
+    telephone_internet: Number(row?.telephone_internet || 0),
+    carburant: Number(row?.transport_gerante || 0),
+    taxe_mairie: Number(row?.mairie || 0),
+    photocopie: Number(row?.photocopie || 0),
+    tontine: Number(row?.tontine || 0),
+    autre_variable: Number(row?.autres_variables || 0),
+    commentaire_autre_variable: row?.commentaire_autres_variables || ''
+  };
+}
 
-  return Number(result.rows[0]?.gain_mm || 0);
+function mapMmToFinance(row) {
+  return {
+    commission_orange: Number(row?.orange_total || 0),
+    commission_wave: Number(row?.wave || 0),
+    commission_mtn: Number(row?.mtn || 0),
+    commission_moov: Number(row?.moov || 0),
+    commission_tresor: Number(row?.tresor || 0),
+    commission_unites: Number(row?.unites || 0)
+  };
+}
+
+function getGainMmFromRow(row) {
+  if (!row) return 0;
+
+  return (
+    Number(row.orange_total || 0) +
+    Number(row.wave || 0) +
+    Number(row.mtn || 0) +
+    Number(row.moov || 0) +
+    Number(row.tresor || 0) +
+    Number(row.unites || 0)
+  );
 }
 
 async function getGainGazMois(siteId, moisDate) {
@@ -144,31 +182,16 @@ async function getGainGazMois(siteId, moisDate) {
   return Number(result.rows[0]?.gain_gaz || 0);
 }
 
-function mapChargesToFinance(row, totalSalaires = 0) {
-  return {
-    salaires: totalSalaires,
-    loyer_magasin_principal: Number(row?.loyer_local || 0),
-    loyer_magasin_gaz: Number(row?.loyer_terrain || 0),
-    eau_electricite: Number(row?.sodeci_cie || 0),
-    telephone_internet: Number(row?.telephone_internet || 0),
-    carburant: Number(row?.transport_gerante || 0),
-    taxe_mairie: Number(row?.mairie || 0),
-    photocopie: Number(row?.photocopie || 0),
-    tontine: Number(row?.tontine || 0),
-    autre_variable: Number(row?.autres_variables || 0),
-    commentaire_autre_variable: row?.commentaire_autres_variables || ''
-  };
-}
-
 async function buildFinanceMois(siteId, moisDate) {
-  const [totalSalaires, salaires, chargesRow, gainMm, gainGaz] = await Promise.all([
+  const [totalSalaires, salaires, chargesRow, mmRow, gainGaz] = await Promise.all([
     getTotalSalairesMois(siteId, moisDate),
     getSalairesDetail(siteId, moisDate),
     getChargesRow(siteId, moisDate),
-    getGainMmMois(siteId, moisDate),
+    getMmMensuelRow(siteId, moisDate),
     getGainGazMois(siteId, moisDate)
   ]);
 
+  const gainMm = getGainMmFromRow(mmRow);
   const autresCharges = getAutresChargesFromRow(chargesRow);
   const totalCharges = totalSalaires + autresCharges;
   const beneficeNet = gainMm + gainGaz - totalCharges;
@@ -176,6 +199,7 @@ async function buildFinanceMois(siteId, moisDate) {
   return {
     mois: moisDate.slice(0, 7),
     salaires,
+    commissions_mm: mapMmToFinance(mmRow),
     charges: mapChargesToFinance(chargesRow, totalSalaires),
     resume: {
       gain_mm: gainMm,
@@ -187,6 +211,77 @@ async function buildFinanceMois(siteId, moisDate) {
     }
   };
 }
+
+/**
+ * POST /api/charges/commissions-mm
+ * Enregistre uniquement les commissions mobile money du mois
+ */
+router.post('/commissions-mm', requireAuth, requireProprietaire, async (req, res) => {
+  const siteId = req.session.siteId;
+  const {
+    mois,
+    commission_orange,
+    commission_wave,
+    commission_mtn,
+    commission_moov,
+    commission_tresor,
+    commission_unites
+  } = req.body;
+
+  if (!mois || !/^\d{4}-\d{2}$/.test(mois)) {
+    return res.status(400).json({ erreur: 'Le mois doit être au format YYYY-MM.' });
+  }
+
+  const moisDate = monthToDate(mois);
+
+  try {
+    await db.query(
+      `
+      INSERT INTO mm_mensuel (
+        site_id,
+        mois,
+        orange_total,
+        wave,
+        mtn,
+        moov,
+        tresor,
+        unites
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+      ON CONFLICT (site_id, mois)
+      DO UPDATE SET
+        orange_total = EXCLUDED.orange_total,
+        wave = EXCLUDED.wave,
+        mtn = EXCLUDED.mtn,
+        moov = EXCLUDED.moov,
+        tresor = EXCLUDED.tresor,
+        unites = EXCLUDED.unites,
+        updated_at = NOW()
+      `,
+      [
+        siteId,
+        moisDate,
+        toPositiveInt(commission_orange),
+        toPositiveInt(commission_wave),
+        toPositiveInt(commission_mtn),
+        toPositiveInt(commission_moov),
+        toPositiveInt(commission_tresor),
+        toPositiveInt(commission_unites)
+      ]
+    );
+
+    const finance = await buildFinanceMois(siteId, moisDate);
+
+    res.json({
+      ok: true,
+      message: 'Commissions mobile money enregistrées.',
+      ...finance
+    });
+  } catch (err) {
+    console.error('Erreur sauvegarde commissions MM:', err);
+    res.status(500).json({ erreur: 'Erreur serveur.' });
+  }
+});
 
 /**
  * GET /api/charges/synthese/annuelle?annee=2026
@@ -255,7 +350,6 @@ router.get('/synthese/annuelle', requireAuth, requireProprietaire, async (req, r
 
 /**
  * GET /api/charges/:mois
- * :mois = YYYY-MM
  */
 router.get('/:mois', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
@@ -276,7 +370,7 @@ router.get('/:mois', requireAuth, requireProprietaire, async (req, res) => {
 
 /**
  * POST /api/charges
- * Enregistre les charges mensuelles simplifiées
+ * Enregistre uniquement les charges mensuelles
  */
 router.post('/', requireAuth, requireProprietaire, async (req, res) => {
   const siteId = req.session.siteId;
@@ -340,10 +434,6 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         sodeci_cie = EXCLUDED.sodeci_cie,
         autres_variables = EXCLUDED.autres_variables,
         commentaire_autres_variables = EXCLUDED.commentaire_autres_variables,
-        impots = 0,
-        cnps = 0,
-        aide_magasin = 0,
-        bonus = 0,
         updated_at = NOW()
       `,
       [
@@ -367,6 +457,7 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
 
     res.json({
       ok: true,
+      message: 'Charges mensuelles enregistrées.',
       ...finance
     });
   } catch (err) {

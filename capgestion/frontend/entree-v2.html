@@ -4,8 +4,53 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Entrée V2</title>
+    <title>CAP GESTION V2 - Connexion</title>
     <link rel="stylesheet" href="/css/main.css" />
+    <style>
+        .login-page {
+            min-height: 100vh;
+        }
+
+        .login-wrap {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 24px 16px;
+        }
+
+        .login-subtitle {
+            text-align: center;
+            margin: 12px 0 20px;
+            color: var(--cap-text-soft);
+            font-size: 14px;
+        }
+
+        .login-card {
+            max-width: 660px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .login-loader {
+            display: none;
+            margin-top: 12px;
+            text-align: center;
+            color: var(--cap-text-soft);
+            font-size: 13px;
+        }
+
+        .login-loader.show {
+            display: block;
+        }
+
+        .login-help {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--cap-text-soft);
+        }
+    </style>
 </head>
 
 <body class="login-page">
@@ -18,7 +63,7 @@
             </div>
         </div>
 
-        <div class="login-subtitle">Connexion de test sans redirection automatique</div>
+        <div class="login-subtitle">Connexion sécurisée à l’application</div>
 
         <div class="login-card">
             <div id="login-erreur" class="alert alert-danger" style="display:none"></div>
@@ -26,18 +71,24 @@
 
             <div class="form-group">
                 <label class="form-label">Adresse email</label>
-                <input type="email" id="email" class="form-input" placeholder="votre@email.com" />
+                <input type="email" id="email" class="form-input" placeholder="votre@email.com"
+                    autocomplete="username" />
             </div>
 
             <div class="form-group">
                 <label class="form-label">Mot de passe</label>
-                <input type="password" id="password" class="form-input" placeholder="••••••••" />
+                <input type="password" id="password" class="form-input" placeholder="••••••••"
+                    autocomplete="current-password" />
             </div>
 
             <div class="actions">
                 <button class="btn btn-primary" onclick="login()" id="btn-login">Se connecter</button>
-                <button class="btn" onclick="testerSession()">Tester session</button>
-                <button class="btn" onclick="allerControle()">Ouvrir contrôle V2</button>
+            </div>
+
+            <div id="login-loader" class="login-loader">Ouverture de votre espace...</div>
+
+            <div class="login-help">
+                Après connexion, vous serez redirigé automatiquement vers votre interface.
             </div>
         </div>
 
@@ -48,7 +99,9 @@
         function showError(msg) {
             const errDiv = document.getElementById('login-erreur');
             const okDiv = document.getElementById('login-ok');
+            const loader = document.getElementById('login-loader');
             okDiv.style.display = 'none';
+            loader.classList.remove('show');
             errDiv.textContent = msg;
             errDiv.style.display = 'block';
         }
@@ -61,10 +114,32 @@
             okDiv.style.display = 'block';
         }
 
+        async function goAfterLogin() {
+            try {
+                const res = await fetch('/api/auth/moi', { credentials: 'include' });
+                const data = await res.json();
+
+                if (res.ok && data.connecte) {
+                    window.location.href = '/controle-v2b.html';
+                    return;
+                }
+
+                showError('Connexion établie, mais la session n’a pas pu être vérifiée.');
+            } catch (err) {
+                showError('Connexion établie, mais impossible de vérifier la session.');
+            }
+        }
+
         async function login() {
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const btn = document.getElementById('btn-login');
+            const loader = document.getElementById('login-loader');
+            const errDiv = document.getElementById('login-erreur');
+            const okDiv = document.getElementById('login-ok');
+
+            errDiv.style.display = 'none';
+            okDiv.style.display = 'none';
 
             if (!email || !password) {
                 showError('Veuillez remplir tous les champs.');
@@ -73,6 +148,7 @@
 
             btn.textContent = 'Connexion...';
             btn.disabled = true;
+            loader.classList.add('show');
 
             try {
                 const res = await fetch('/api/auth/login', {
@@ -82,10 +158,11 @@
                     body: JSON.stringify({ email, mot_de_passe: password })
                 });
 
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
 
                 if (res.ok) {
-                    showOk('Connexion réussie. Clique sur “Ouvrir contrôle V2”.');
+                    showOk('Connexion réussie.');
+                    await goAfterLogin();
                 } else {
                     showError(data.erreur || 'Erreur de connexion.');
                 }
@@ -94,25 +171,8 @@
             } finally {
                 btn.textContent = 'Se connecter';
                 btn.disabled = false;
+                loader.classList.remove('show');
             }
-        }
-
-        async function testerSession() {
-            try {
-                const res = await fetch('/api/auth/moi', { credentials: 'include' });
-                const data = await res.json();
-                if (res.ok && data.connecte) {
-                    showOk(`Session active : ${data.utilisateur.nom} (${data.utilisateur.role})`);
-                } else {
-                    showError('Session non active.');
-                }
-            } catch {
-                showError('Impossible de tester la session.');
-            }
-        }
-
-        function allerControle() {
-            window.location.href = '/controle-v2b.html';
         }
 
         document.addEventListener('keydown', e => {

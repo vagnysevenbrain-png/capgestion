@@ -14,96 +14,100 @@ function isoDate(value) {
     return String(value).slice(0, 10);
 }
 
+function pick(obj, keys, fallback = 0) {
+    if (!obj) return fallback;
+    for (const key of keys) {
+        if (obj[key] !== undefined && obj[key] !== null) {
+            return obj[key];
+        }
+    }
+    return fallback;
+}
+
 async function getLatestRapport(siteId) {
     const result = await db.query(
         `
-    SELECT
-      r.id,
-      r.site_id,
-      r.date_rapport,
-      r.observation,
-      r.gerant_id,
-
-      rs.orange_rev,
-      rs.orange_pdv,
-      rs.wave,
-      rs.mtn,
-      rs.moov,
-      rs.moov_p2,
-      rs.tresor,
-      rs.unites,
-      rs.especes,
-
-      rg.b12_vendues,
-      rg.b12_rechargees,
-      rg.b12_fuites,
-      rg.b6_vendues,
-      rg.b6_rechargees,
-      rg.b6_fuites,
-      rg.ventes_gaz_jour,
-      rg.commission_gaz_jour,
-      rg.caisse_gaz_disponible
-    FROM rapports r
-    LEFT JOIN rapport_soldes rs
-      ON rs.rapport_id = r.id
-    LEFT JOIN rapport_gaz rg
-      ON rg.rapport_id = r.id
-    WHERE r.site_id = $1
-    ORDER BY r.date_rapport DESC, r.id DESC
+    SELECT *
+    FROM rapports
+    WHERE site_id = $1
+    ORDER BY date_rapport DESC, id DESC
     LIMIT 1
     `,
         [siteId]
     );
-
     return result.rows[0] || null;
+}
+
+async function getRapportSoldes(rapportId) {
+    if (!rapportId) return null;
+    const result = await db.query(
+        `
+    SELECT *
+    FROM rapport_soldes
+    WHERE rapport_id = $1
+    LIMIT 1
+    `,
+        [rapportId]
+    );
+    return result.rows[0] || null;
+}
+
+async function getRapportGaz(rapportId) {
+    if (!rapportId) return null;
+    const result = await db.query(
+        `
+    SELECT *
+    FROM rapport_gaz
+    WHERE rapport_id = $1
+    LIMIT 1
+    `,
+        [rapportId]
+    );
+    return result.rows[0] || null;
+}
+
+async function getRapportDepensesTotal(rapportId) {
+    if (!rapportId) return 0;
+    try {
+        const result = await db.query(
+            `
+      SELECT COALESCE(SUM(montant), 0) AS total_depenses
+      FROM rapport_depenses
+      WHERE rapport_id = $1
+      `,
+            [rapportId]
+        );
+        return n(result.rows[0]?.total_depenses);
+    } catch (err) {
+        console.error('Erreur total dépenses rapport:', err);
+        return 0;
+    }
 }
 
 async function getFallbackFondMM(siteId) {
     const result = await db.query(
         `
-    SELECT
-      orange_rev,
-      orange_pdv,
-      wave,
-      mtn,
-      moov,
-      moov_p2,
-      tresor,
-      unites,
-      especes
+    SELECT *
     FROM fond_mm
     WHERE site_id = $1
-    ORDER BY updated_at DESC
+    ORDER BY id DESC
     LIMIT 1
     `,
         [siteId]
     );
-
     return result.rows[0] || null;
 }
 
 async function getGazConfig(siteId) {
     const result = await db.query(
         `
-    SELECT
-      site_id,
-      b12_pleines,
-      b12_vides,
-      b6_pleines,
-      b6_vides,
-      b12_commission,
-      b6_commission,
-      b12_prix_vente,
-      b6_prix_vente,
-      b12_cout_recharge,
-      b6_cout_recharge
+    SELECT *
     FROM gaz_config
     WHERE site_id = $1
     LIMIT 1
     `,
         [siteId]
     );
-
     return result.rows[0] || null;
 }
 
@@ -176,19 +180,25 @@ router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
 
     try {
-        const [
-            latestRapport,
-            fallbackFond,
-            gazConfig,
-            comptesClients,
-            fondMisADisposition
-        ] = await Promise.all([
+        const [latestRapport, fallbackFond, gazConfig, comptesClients, fondMisADisposition] = await Promise.all([
             getLatestRapport(siteId),
             getFallbackFondMM(siteId),
             getGazConfig(siteId),
             getComptesClientsStats(siteId),
             getFondMisADisposition(siteId)
         ]);
+
+        let rapportSoldes = null;
+        let rapportGaz = null;
+        let totalDepensesJour = 0;
+
+        if (latestRapport) {
+            [rapportSoldes, rapportGaz, totalDepensesJour] = await Promise.all([
+                getRapportSoldes(latestRapport.id),
+                getRapportGaz(latestRapport.id),
+                getRapportDepensesTotal(latestRapport.id)
+            ]);
+        }
 
         let fondsMM = {
             orange_rev: 0,
@@ -206,17 +216,17 @@ router.get('/', requireAuth, async (req, res) => {
             date_source: null
         };
 
-        if (latestRapport) {
-            const orangeRev = n(latestRapport.orange_rev);
-            const orangePdv = n(latestRapport.orange_pdv);
+        if (latestRapport && rapportSoldes) {
+            const orangeRev = n(pick(rapportSoldes, ['orange_rev']));
+            const orangePdv = n(pick(rapportSoldes, ['orange_pdv']));
             const orangeTotal = orangeRev + orangePdv;
-            const wave = n(latestRapport.wave);
-            const mtn = n(latestRapport.mtn);
-            const moov = n(latestRapport.moov);
-            const moovP2 = n(latestRapport.moov_p2);
-            const tresor = n(latestRapport.tresor);
-            const unites = n(latestRapport.unites);
-            const especes = n(latestRapport.especes);
+            const wave = n(pick(rapportSoldes, ['wave']));
+            const mtn = n(pick(rapportSoldes, ['mtn']));
+            const moov = n(pick(rapportSoldes, ['moov']));
+            const moovP2 = n(pick(rapportSoldes, ['moov_p2']));
+            const tresor = n(pick(rapportSoldes, ['tresor']));
+            const unites = n(pick(rapportSoldes, ['unites']));
+            const especes = n(pick(rapportSoldes, ['especes']));
 
             fondsMM = {
                 orange_rev: orangeRev,
@@ -234,16 +244,16 @@ router.get('/', requireAuth, async (req, res) => {
                 date_source: isoDate(latestRapport.date_rapport)
             };
         } else if (fallbackFond) {
-            const orangeRev = n(fallbackFond.orange_rev);
-            const orangePdv = n(fallbackFond.orange_pdv);
+            const orangeRev = n(pick(fallbackFond, ['orange_rev']));
+            const orangePdv = n(pick(fallbackFond, ['orange_pdv']));
             const orangeTotal = orangeRev + orangePdv;
-            const wave = n(fallbackFond.wave);
-            const mtn = n(fallbackFond.mtn);
-            const moov = n(fallbackFond.moov);
-            const moovP2 = n(fallbackFond.moov_p2);
-            const tresor = n(fallbackFond.tresor);
-            const unites = n(fallbackFond.unites);
-            const especes = n(fallbackFond.especes);
+            const wave = n(pick(fallbackFond, ['wave']));
+            const mtn = n(pick(fallbackFond, ['mtn']));
+            const moov = n(pick(fallbackFond, ['moov']));
+            const moovP2 = n(pick(fallbackFond, ['moov_p2']));
+            const tresor = n(pick(fallbackFond, ['tresor']));
+            const unites = n(pick(fallbackFond, ['unites']));
+            const especes = n(pick(fallbackFond, ['especes']));
 
             fondsMM = {
                 orange_rev: orangeRev,
@@ -262,34 +272,39 @@ router.get('/', requireAuth, async (req, res) => {
             };
         }
 
+        const b12Pleine = n(pick(gazConfig, ['b12_pleines']));
+        const b12Vide = n(pick(gazConfig, ['b12_vides']));
+        const b6Pleine = n(pick(gazConfig, ['b6_pleines']));
+        const b6Vide = n(pick(gazConfig, ['b6_vides']));
+        const b12Recharge = n(pick(gazConfig, ['b12_cout_recharge']));
+        const b6Recharge = n(pick(gazConfig, ['b6_cout_recharge']));
+
         const gaz = {
-            b12_pleines: n(gazConfig?.b12_pleines),
-            b12_vides: n(gazConfig?.b12_vides),
-            b12_stock: n(gazConfig?.b12_pleines) + n(gazConfig?.b12_vides),
-            b6_pleines: n(gazConfig?.b6_pleines),
-            b6_vides: n(gazConfig?.b6_vides),
-            b6_stock: n(gazConfig?.b6_pleines) + n(gazConfig?.b6_vides),
-            b12_cout_recharge: n(gazConfig?.b12_cout_recharge),
-            b6_cout_recharge: n(gazConfig?.b6_cout_recharge),
-            caisse_theorique_gaz:
-                (n(gazConfig?.b12_vides) * n(gazConfig?.b12_cout_recharge)) +
-                (n(gazConfig?.b6_vides) * n(gazConfig?.b6_cout_recharge))
+            b12_pleines: b12Pleine,
+            b12_vides: b12Vide,
+            b12_stock: b12Pleine + b12Vide,
+            b6_pleines: b6Pleine,
+            b6_vides: b6Vide,
+            b6_stock: b6Pleine + b6Vide,
+            b12_cout_recharge: b12Recharge,
+            b6_cout_recharge: b6Recharge,
+            caisse_theorique_gaz: (b12Vide * b12Recharge) + (b6Vide * b6Recharge)
         };
 
         const activite = {
             rapport_saisi: !!latestRapport,
             date_rapport_reference: isoDate(latestRapport?.date_rapport),
-            b12_vendues: n(latestRapport?.b12_vendues),
-            b12_rechargees: n(latestRapport?.b12_rechargees),
-            b12_fuites: n(latestRapport?.b12_fuites),
-            b6_vendues: n(latestRapport?.b6_vendues),
-            b6_rechargees: n(latestRapport?.b6_rechargees),
-            b6_fuites: n(latestRapport?.b6_fuites),
-            ventes_gaz_jour: n(latestRapport?.ventes_gaz_jour),
-            commission_gaz_jour: n(latestRapport?.commission_gaz_jour),
-            caisse_gaz_disponible: n(latestRapport?.caisse_gaz_disponible),
-            ecart_caisse_gaz: n(latestRapport?.caisse_gaz_disponible) - gaz.caisse_theorique_gaz,
-            total_depenses_jour: 0
+            b12_vendues: n(pick(rapportGaz, ['b12_vendues', 'b12v'])),
+            b12_rechargees: n(pick(rapportGaz, ['b12_rechargees', 'b12r'])),
+            b12_fuites: n(pick(rapportGaz, ['b12_fuites', 'b12f'])),
+            b6_vendues: n(pick(rapportGaz, ['b6_vendues', 'b6v'])),
+            b6_rechargees: n(pick(rapportGaz, ['b6_rechargees', 'b6r'])),
+            b6_fuites: n(pick(rapportGaz, ['b6_fuites', 'b6f'])),
+            ventes_gaz_jour: n(pick(rapportGaz, ['ventes_gaz_jour'])),
+            commission_gaz_jour: n(pick(rapportGaz, ['commission_gaz_jour'])),
+            caisse_gaz_disponible: n(pick(rapportGaz, ['caisse_gaz_disponible'])),
+            ecart_caisse_gaz: n(pick(rapportGaz, ['caisse_gaz_disponible'])) - gaz.caisse_theorique_gaz,
+            total_depenses_jour: totalDepensesJour
         };
 
         const tresorerieCorrigee =

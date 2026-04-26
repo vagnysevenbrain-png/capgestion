@@ -142,6 +142,39 @@
             margin-top: 10px;
         }
 
+        .feedback-box {
+            display: none;
+            margin-bottom: 12px;
+            border-radius: 14px;
+            padding: 12px 14px;
+            border: 1px solid #DFE8D4;
+            background: #FCFDF9;
+            font-size: 13px;
+            color: var(--cap-text);
+        }
+
+        .feedback-box.show {
+            display: block;
+        }
+
+        .feedback-box.success {
+            background: #F3F7EC;
+            border-color: #D6E7B8;
+            color: #29401A;
+        }
+
+        .feedback-box.error {
+            background: #FDEDEC;
+            border-color: #F3C8C3;
+            color: #7B241C;
+        }
+
+        .feedback-box.info {
+            background: #F7FAFC;
+            border-color: #DCE4EC;
+            color: #2F3A44;
+        }
+
         .rapport-compact-top {
             display: grid;
             grid-template-columns: 1fr;
@@ -329,6 +362,38 @@
             border-color: #F3C8C3;
         }
 
+        .historique-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .historique-card {
+            border: 1px solid #DFE8D4;
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+        }
+
+        .historique-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: var(--cap-text);
+        }
+
+        .historique-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            font-size: 12px;
+            color: var(--cap-text-soft);
+        }
+
         @media (max-width: 720px) {
             .tabs-wrap {
                 top: 76px;
@@ -345,7 +410,8 @@
             .rapport-inline-2,
             .rapport-grid-compact,
             .dep-line-compact,
-            .list-grid {
+            .list-grid,
+            .historique-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -469,6 +535,8 @@
                         <div class="card-title" style="margin-bottom:0;">Rapport du jour</div>
                         <div class="muted">Version compacte smartphone</div>
                     </div>
+
+                    <div id="rapport-feedback" class="feedback-box"></div>
 
                     <div class="rapport-compact-top">
                         <div class="rapport-inline-2">
@@ -663,6 +731,8 @@
                         <div class="muted">Consultation des rapports</div>
                     </div>
 
+                    <div id="historique-feedback" class="feedback-box"></div>
+
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">Mois (YYYY-MM)</label>
@@ -677,6 +747,8 @@
                             </div>
                         </div>
                     </div>
+
+                    <div id="historique-resultats" class="muted">Aucun rapport chargé.</div>
                 </div>
             </div>
         </section>
@@ -1054,6 +1126,20 @@
             sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         }
 
+        function showFeedback(id, type, message) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.className = `feedback-box show ${type}`;
+            el.textContent = message;
+        }
+
+        function clearFeedback(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.className = 'feedback-box';
+            el.textContent = '';
+        }
+
         function fcfa(value) {
             return `${new Intl.NumberFormat('fr-FR').format(Number(value || 0))} FCFA`;
         }
@@ -1274,6 +1360,53 @@
       `;
         }
 
+        function renderHistoriqueRapports(data) {
+            const container = document.getElementById('historique-resultats');
+            const rows = Array.isArray(data) ? data : (Array.isArray(data?.rapports) ? data.rapports : []);
+
+            if (!rows.length) {
+                container.innerHTML = '<span class="muted">Aucun rapport trouvé pour cette période.</span>';
+                return;
+            }
+
+            container.innerHTML = `
+        <div class="historique-list">
+          ${rows.map(row => {
+                const soldes = row.soldes || row.rapport_soldes || {};
+                const gaz = row.gaz || row.rapport_gaz || {};
+                const depenses = Array.isArray(row.depenses) ? row.depenses : [];
+                const totalSoldes =
+                    Number(soldes.orange_rev || 0) +
+                    Number(soldes.orange_pdv || 0) +
+                    Number(soldes.wave || 0) +
+                    Number(soldes.mtn || 0) +
+                    Number(soldes.moov || 0) +
+                    Number(soldes.moov_p2 || 0) +
+                    Number(soldes.tresor || 0) +
+                    Number(soldes.especes || 0) +
+                    Number(soldes.unites || 0);
+                const totalDepenses = depenses.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
+                return `
+              <div class="historique-card">
+                <div class="historique-title">
+                  <span>${escapeHtml(row.date_rapport || row.date || '-')}</span>
+                  <span>${escapeHtml(row.statut || 'envoye')}</span>
+                </div>
+                <div class="historique-grid">
+                  <div>Observation : ${escapeHtml(row.observation || '-')}</div>
+                  <div>Total soldes : ${fcfa(totalSoldes)}</div>
+                  <div>B12 vendues : ${Number(gaz.b12_vendues || 0)}</div>
+                  <div>B6 vendues : ${Number(gaz.b6_vendues || 0)}</div>
+                  <div>Dépenses : ${fcfa(totalDepenses)}</div>
+                  <div>Nb dépenses : ${depenses.length}</div>
+                </div>
+              </div>
+            `;
+            }).join('')}
+        </div>
+      `;
+        }
+
         function updateRapportSummary() {
             const totalSoldes =
                 rapportNumber('r-orange-rev') +
@@ -1308,66 +1441,6 @@
             document.querySelectorAll('.rapport-watch').forEach(input => {
                 input.addEventListener('input', updateRapportSummary);
             });
-        }
-
-        function refreshDepensesRapportUI() {
-            const bloc = document.getElementById('depenses-liste');
-
-            if (!depensesRapport.length) {
-                bloc.innerHTML = '<span class="muted">Aucune dépense ajoutée.</span>';
-                updateRapportSummary();
-                return;
-            }
-
-            bloc.innerHTML = depensesRapport.map((dep, index) => `
-        <div class="dep-item">
-          <span><strong>${escapeHtml(dep.description)}</strong> - ${fcfa(dep.montant)}</span>
-          <button class="btn btn-sm btn-danger" onclick="supprimerDepense(${index})">Supprimer</button>
-        </div>
-      `).join('');
-
-            updateRapportSummary();
-        }
-
-        function ajouterDepense() {
-            const description = valeurChamp('dep-description').trim();
-            const montant = Number(valeurChamp('dep-montant'));
-
-            if (!description) {
-                afficher({ erreur: 'Description de dépense requise.' });
-                return;
-            }
-
-            if (!Number.isFinite(montant) || montant <= 0) {
-                afficher({ erreur: 'Montant de dépense invalide.' });
-                return;
-            }
-
-            depensesRapport.push({ description, montant: Math.round(montant) });
-            document.getElementById('dep-description').value = '';
-            document.getElementById('dep-montant').value = '';
-            refreshDepensesRapportUI();
-            afficher({ ok: true, depenses: depensesRapport });
-        }
-
-        function supprimerDepense(index) {
-            depensesRapport.splice(index, 1);
-            refreshDepensesRapportUI();
-            afficher({ ok: true, depenses: depensesRapport });
-        }
-
-        function reinitialiserRapport() {
-            document.getElementById('r-date').value = todayISO();
-            document.getElementById('r-observation').value = '';
-            [
-                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
-                'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
-                'r-b6v', 'r-b6r', 'r-b6f', 'r-caisse-gaz-disponible'
-            ].forEach(id => document.getElementById(id).value = '');
-
-            depensesRapport = [];
-            refreshDepensesRapportUI();
-            updateRapportSummary();
         }
 
         function resetCompteClientForm() {
@@ -1423,33 +1496,6 @@
           `).join('')}
         </div>
       `;
-        }
-
-        async function creerOuModifierCompteClient() {
-            const id = document.getElementById('cc-id').value.trim();
-            const payload = {
-                nom: document.getElementById('cc-nom').value,
-                telephone: document.getElementById('cc-tel').value,
-                observation: document.getElementById('cc-obs').value
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/comptes-clients/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/comptes-clients', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetCompteClientForm();
-                await testerComptesClients();
-            }
         }
 
         async function changerStatutClient(id, actif) {
@@ -1516,33 +1562,6 @@
           `).join('')}
         </div>
       `;
-        }
-
-        async function creerOuModifierEmploye() {
-            const id = document.getElementById('emp-id').value.trim();
-            const payload = {
-                nom: document.getElementById('emp-nom').value,
-                poste: document.getElementById('emp-poste').value,
-                salaire_base: document.getElementById('emp-salaire').value
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/employes/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/employes', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetEmployeForm();
-                await testerEmployes();
-            }
         }
 
         async function changerStatutEmploye(id, actif) {
@@ -1614,37 +1633,6 @@
           `).join('')}
         </div>
       `;
-        }
-
-        async function creerOuModifierUtilisateur() {
-            const id = document.getElementById('usr-id').value.trim();
-            const employeId = document.getElementById('usr-employe-id').value.trim();
-
-            const payload = {
-                nom: document.getElementById('usr-nom').value,
-                email: document.getElementById('usr-email').value,
-                mot_de_passe: document.getElementById('usr-password').value,
-                role: document.getElementById('usr-role').value,
-                employe_id: employeId ? Number(employeId) : null
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/utilisateurs/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/utilisateurs', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetUtilisateurForm();
-                await testerUtilisateurs();
-            }
         }
 
         async function changerStatutUtilisateur(id, actif) {
@@ -1745,9 +1733,18 @@
         }
 
         async function chargerRapports() {
+            clearFeedback('historique-feedback');
             const mois = valeurChamp('hist-mois').trim();
             const url = mois ? `/api/rapports?mois=${encodeURIComponent(mois)}` : '/api/rapports';
-            await api(url);
+            const { res, data } = await api(url);
+            if (res.ok) {
+                renderHistoriqueRapports(data);
+                const nb = Array.isArray(data) ? data.length : (Array.isArray(data?.rapports) ? data.rapports.length : 0);
+                showFeedback('historique-feedback', 'success', `${nb} rapport(s) chargé(s).`);
+            } else {
+                renderHistoriqueRapports([]);
+                showFeedback('historique-feedback', 'error', data?.erreur || 'Impossible de charger les rapports.');
+            }
         }
 
         function chargerRapportsDuMoisCourant() {
@@ -1756,6 +1753,7 @@
         }
 
         async function enregistrerRapport() {
+            clearFeedback('rapport-feedback');
             const payload = {
                 date_rapport: valeurChamp('r-date'),
                 observation: valeurChamp('r-observation'),
@@ -1782,14 +1780,16 @@
                 depenses: depensesRapport
             };
 
-            const { res } = await api('/api/rapports', {
+            const { res, data } = await api('/api/rapports', {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
+                showFeedback('rapport-feedback', 'success', 'Rapport enregistré avec succès.');
                 await testerDashboard();
-                showMainTab('accueil');
+            } else {
+                showFeedback('rapport-feedback', 'error', data?.erreur || 'Impossible d’enregistrer le rapport.');
             }
         }
 
@@ -1959,10 +1959,6 @@
             }
         }
 
-        async function creerCompteClient() {
-            await creerOuModifierCompteClient();
-        }
-
         async function ajouterMouvementCompte() {
             const compteId = document.getElementById('mvt-compte-id').value.trim();
             if (!compteId) {
@@ -2017,10 +2013,6 @@
             }
         }
 
-        async function creerEmploye() {
-            await creerOuModifierEmploye();
-        }
-
         async function testerUtilisateurs() {
             const { res, data } = await api('/api/utilisateurs');
             if (res.ok) {
@@ -2057,10 +2049,6 @@
                 resetUtilisateurForm();
                 await testerUtilisateurs();
             }
-        }
-
-        async function creerUtilisateur() {
-            await creerOuModifierUtilisateur();
         }
 
         async function ajouterFondMisADisposition() {
@@ -2137,6 +2125,8 @@
             resetCompteClientForm();
             resetEmployeForm();
             resetUtilisateurForm();
+            clearFeedback('rapport-feedback');
+            clearFeedback('historique-feedback');
 
             await chargerListeClientsDansSelect();
             await testerSession();

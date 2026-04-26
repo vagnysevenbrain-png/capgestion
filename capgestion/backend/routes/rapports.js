@@ -10,6 +10,11 @@ function toPositiveInt(value, defaultValue = 0) {
   return Math.round(n);
 }
 
+function toIsoDate(value) {
+  if (!value) return null;
+  return new Date(value).toISOString().slice(0, 10);
+}
+
 function getGerantDeadline(dateRapport) {
   const d = new Date(dateRapport);
   d.setDate(d.getDate() + 2);
@@ -114,6 +119,143 @@ async function syncFondMmFromSoldes(client, siteId, soldes) {
   );
 }
 
+async function getRapportBaseById(clientOrDb, id, siteId) {
+  const result = await clientOrDb.query(
+    `
+    SELECT
+      r.id,
+      r.site_id,
+      r.gerant_id,
+      r.date_rapport,
+      r.observation,
+      r.statut,
+      r.created_at,
+      r.updated_at,
+      r.last_modified_by,
+      r.last_modified_at,
+
+      gu.nom AS gerant_nom,
+      mu.nom AS last_modified_by_nom,
+
+      s.orange_rev,
+      s.orange_pdv,
+      s.wave,
+      s.mtn,
+      s.moov,
+      s.moov_p2,
+      s.tresor,
+      s.especes,
+      s.unites,
+
+      g.b12_vendues,
+      g.b12_rechargees,
+      g.b12_fuites,
+      g.b6_vendues,
+      g.b6_rechargees,
+      g.b6_fuites,
+      g.caisse_gaz_disponible
+    FROM rapports r
+    JOIN utilisateurs gu
+      ON r.gerant_id = gu.id
+    LEFT JOIN utilisateurs mu
+      ON r.last_modified_by = mu.id
+    LEFT JOIN rapport_soldes s
+      ON s.rapport_id = r.id
+    LEFT JOIN rapport_gaz g
+      ON g.rapport_id = r.id
+    WHERE r.id = $1
+      AND r.site_id = $2
+    LIMIT 1
+    `,
+    [id, siteId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getRapportBaseByDate(clientOrDb, dateRapport, siteId) {
+  const result = await clientOrDb.query(
+    `
+    SELECT
+      r.id,
+      r.site_id,
+      r.gerant_id,
+      r.date_rapport,
+      r.observation,
+      r.statut,
+      r.created_at,
+      r.updated_at,
+      r.last_modified_by,
+      r.last_modified_at,
+
+      gu.nom AS gerant_nom,
+      mu.nom AS last_modified_by_nom,
+
+      s.orange_rev,
+      s.orange_pdv,
+      s.wave,
+      s.mtn,
+      s.moov,
+      s.moov_p2,
+      s.tresor,
+      s.especes,
+      s.unites,
+
+      g.b12_vendues,
+      g.b12_rechargees,
+      g.b12_fuites,
+      g.b6_vendues,
+      g.b6_rechargees,
+      g.b6_fuites,
+      g.caisse_gaz_disponible
+    FROM rapports r
+    JOIN utilisateurs gu
+      ON r.gerant_id = gu.id
+    LEFT JOIN utilisateurs mu
+      ON r.last_modified_by = mu.id
+    LEFT JOIN rapport_soldes s
+      ON s.rapport_id = r.id
+    LEFT JOIN rapport_gaz g
+      ON g.rapport_id = r.id
+    WHERE r.site_id = $1
+      AND r.date_rapport = $2::date
+    LIMIT 1
+    `,
+    [siteId, dateRapport]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function getDepensesByRapportId(clientOrDb, rapportId) {
+  const deps = await clientOrDb.query(
+    `
+    SELECT description, montant
+    FROM rapport_depenses
+    WHERE rapport_id = $1
+    ORDER BY id ASC
+    `,
+    [rapportId]
+  );
+
+  return deps.rows;
+}
+
+async function enrichRapport(clientOrDb, rapport, session) {
+  if (!rapport) return null;
+
+  const depenses = await getDepensesByRapportId(clientOrDb, rapport.id);
+  const droit = verifierDroitModification(rapport, session);
+
+  return {
+    ...rapport,
+    date_rapport: toIsoDate(rapport.date_rapport),
+    modifiable: droit.ok,
+    raison_non_modifiable: droit.ok ? null : droit.erreur,
+    depenses
+  };
+}
+
 /**
  * POST /api/rapports
  * Créer un rapport journalier
@@ -130,12 +272,31 @@ router.post('/', requireAuth, async (req, res) => {
   const client = await db.pool.connect();
 
   try {
+    const existing = await getRapportBaseByDate(client, date_rapport, siteId);
+
+    if (existing) {
+      const droit = verifierDroitModification(existing, req.session);
+      return res.status(409).json({
+        erreur: 'Un rapport existe déjà pour cette date.',
+        rapport_id: existing.id,
+        modifiable: droit.ok,
+        raison_non_modifiable: droit.ok ? null : droit.erreur
+      });
+    }
+
     await client.query('BEGIN');
 
     const rRes = await client.query(
       `
-      INSERT INTO rapports (site_id, gerant_id, date_rapport, observation, last_modified_by)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO rapports (
+        site_id,
+        gerant_id,
+        date_rapport,
+        observation,
+        last_modified_by,
+        last_modified_at
+      )
+      VALUES ($1, $2, $3, $4, $5, NOW())
       RETURNING id
       `,
       [siteId, gerantId, date_rapport, observation || null, gerantId]
@@ -241,18 +402,26 @@ router.post('/', requireAuth, async (req, res) => {
       ]
     );
 
-    // Synchronise fond_mm seulement si le rapport créé est celui du jour
     if (isTodayString(date_rapport)) {
       await syncFondMmFromSoldes(client, siteId, soldesPayload);
     }
 
+    await client.query(
+      `
+      INSERT INTO rapport_modifications (rapport_id, modifie_par, motif)
+      VALUES ($1, $2, $3)
+      `,
+      [rapportId, gerantId, 'Création rapport']
+    );
+
     await client.query('COMMIT');
-    res.status(201).json({ ok: true, rapport_id: rapportId });
+
+    const saved = await getRapportBaseById(db, rapportId, siteId);
+    const enriched = await enrichRapport(db, saved, req.session);
+
+    res.status(201).json({ ok: true, rapport: enriched });
   } catch (err) {
     await client.query('ROLLBACK');
-    if (err.code === '23505') {
-      return res.status(409).json({ erreur: 'Un rapport existe déjà pour cette date.' });
-    }
     console.error('Erreur création rapport:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
   } finally {
@@ -263,52 +432,66 @@ router.post('/', requireAuth, async (req, res) => {
 /**
  * GET /api/rapports
  * Liste des rapports
+ * Filtres supportés :
+ * - ?mois=YYYY-MM
+ * - ?date=YYYY-MM-DD
  */
 router.get('/', requireAuth, async (req, res) => {
   const siteId = req.session.siteId;
-  const { mois, limit = 31 } = req.query;
+  const { mois, date, limit = 31 } = req.query;
 
   try {
     let query = `
       SELECT
         r.id,
+        r.site_id,
         r.date_rapport,
         r.observation,
         r.statut,
         r.created_at,
         r.updated_at,
         r.gerant_id,
-        u.nom AS gerant_nom,
+        r.last_modified_by,
+        r.last_modified_at,
+
+        gu.nom AS gerant_nom,
+        mu.nom AS last_modified_by_nom,
+
         s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov,
         s.moov_p2, s.tresor, s.especes, s.unites,
+
         g.b12_vendues, g.b12_rechargees, g.b12_fuites,
         g.b6_vendues,  g.b6_rechargees,  g.b6_fuites,
         g.caisse_gaz_disponible
       FROM rapports r
-      JOIN utilisateurs u        ON r.gerant_id = u.id
-      LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
-      LEFT JOIN rapport_gaz g    ON g.rapport_id = r.id
+      JOIN utilisateurs gu
+        ON r.gerant_id = gu.id
+      LEFT JOIN utilisateurs mu
+        ON r.last_modified_by = mu.id
+      LEFT JOIN rapport_soldes s
+        ON s.rapport_id = r.id
+      LEFT JOIN rapport_gaz g
+        ON g.rapport_id = r.id
       WHERE r.site_id = $1
     `;
     const params = [siteId];
 
-    if (mois) {
+    if (date) {
+      params.push(date);
+      query += ` AND r.date_rapport = $${params.length}::date`;
+    } else if (mois) {
       params.push(mois);
       query += ` AND to_char(r.date_rapport, 'YYYY-MM') = $${params.length}`;
     }
 
-    query += ` ORDER BY r.date_rapport DESC LIMIT $${params.length + 1}`;
+    query += ` ORDER BY r.date_rapport DESC, r.id DESC LIMIT $${params.length + 1}`;
     params.push(parseInt(limit, 10));
 
     const result = await db.query(query, params);
-    const rapports = result.rows;
 
-    for (const r of rapports) {
-      const deps = await db.query(
-        `SELECT description, montant FROM rapport_depenses WHERE rapport_id = $1`,
-        [r.id]
-      );
-      r.depenses = deps.rows;
+    const rapports = [];
+    for (const row of result.rows) {
+      rapports.push(await enrichRapport(db, row, req.session));
     }
 
     res.json(rapports);
@@ -327,38 +510,14 @@ router.get('/:id', requireAuth, async (req, res) => {
   const siteId = req.session.siteId;
 
   try {
-    const result = await db.query(
-      `
-      SELECT
-        r.*,
-        u.nom AS gerant_nom,
-        s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov,
-        s.moov_p2, s.tresor, s.especes, s.unites,
-        g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites,
-        g.caisse_gaz_disponible
-      FROM rapports r
-      JOIN utilisateurs u        ON r.gerant_id = u.id
-      LEFT JOIN rapport_soldes s ON s.rapport_id = r.id
-      LEFT JOIN rapport_gaz g    ON g.rapport_id = r.id
-      WHERE r.id = $1
-        AND r.site_id = $2
-      `,
-      [id, siteId]
-    );
+    const rapport = await getRapportBaseById(db, id, siteId);
 
-    if (result.rows.length === 0) {
+    if (!rapport) {
       return res.status(404).json({ erreur: 'Rapport introuvable.' });
     }
 
-    const rapport = result.rows[0];
-    const deps = await db.query(
-      `SELECT description, montant FROM rapport_depenses WHERE rapport_id = $1`,
-      [id]
-    );
-    rapport.depenses = deps.rows;
-
-    res.json(rapport);
+    const enriched = await enrichRapport(db, rapport, req.session);
+    res.json(enriched);
   } catch (err) {
     console.error('Erreur détail rapport:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
@@ -378,51 +537,26 @@ router.put('/:id', requireAuth, async (req, res) => {
   const client = await db.pool.connect();
 
   try {
-    const check = await client.query(
-      `
-      SELECT r.*
-      FROM rapports r
-      WHERE r.id = $1
-        AND r.site_id = $2
-      `,
-      [id, siteId]
-    );
+    const rapport = await getRapportBaseById(client, id, siteId);
 
-    if (check.rows.length === 0) {
+    if (!rapport) {
       return res.status(404).json({ erreur: 'Rapport introuvable.' });
     }
 
-    const rapport = check.rows[0];
     const droit = verifierDroitModification(rapport, req.session);
 
     if (!droit.ok) {
       return res.status(403).json({ erreur: droit.erreur });
     }
 
-    const oldGazRes = await client.query(
-      `
-      SELECT
-        b12_vendues,
-        b12_rechargees,
-        b12_fuites,
-        b6_vendues,
-        b6_rechargees,
-        b6_fuites,
-        caisse_gaz_disponible
-      FROM rapport_gaz
-      WHERE rapport_id = $1
-      `,
-      [id]
-    );
-
-    const oldGaz = oldGazRes.rows[0] || {
-      b12_vendues: 0,
-      b12_rechargees: 0,
-      b12_fuites: 0,
-      b6_vendues: 0,
-      b6_rechargees: 0,
-      b6_fuites: 0,
-      caisse_gaz_disponible: 0
+    const oldGaz = {
+      b12_vendues: toPositiveInt(rapport.b12_vendues),
+      b12_rechargees: toPositiveInt(rapport.b12_rechargees),
+      b12_fuites: toPositiveInt(rapport.b12_fuites),
+      b6_vendues: toPositiveInt(rapport.b6_vendues),
+      b6_rechargees: toPositiveInt(rapport.b6_rechargees),
+      b6_fuites: toPositiveInt(rapport.b6_fuites),
+      caisse_gaz_disponible: toPositiveInt(rapport.caisse_gaz_disponible)
     };
 
     const newB12v = toPositiveInt(gaz?.b12v);
@@ -435,12 +569,12 @@ router.put('/:id', requireAuth, async (req, res) => {
       gaz?.caisse_gaz_disponible ?? gaz?.caisse_disponible
     );
 
-    const deltaB12r = newB12r - Number(oldGaz.b12_rechargees || 0);
-    const deltaB12v = newB12v - Number(oldGaz.b12_vendues || 0);
-    const deltaB12f = newB12f - Number(oldGaz.b12_fuites || 0);
-    const deltaB6r = newB6r - Number(oldGaz.b6_rechargees || 0);
-    const deltaB6v = newB6v - Number(oldGaz.b6_vendues || 0);
-    const deltaB6f = newB6f - Number(oldGaz.b6_fuites || 0);
+    const deltaB12r = newB12r - oldGaz.b12_rechargees;
+    const deltaB12v = newB12v - oldGaz.b12_vendues;
+    const deltaB12f = newB12f - oldGaz.b12_fuites;
+    const deltaB6r = newB6r - oldGaz.b6_rechargees;
+    const deltaB6v = newB6v - oldGaz.b6_vendues;
+    const deltaB6f = newB6f - oldGaz.b6_fuites;
 
     const soldesPayload = {
       orange_rev: toPositiveInt(soldes?.orange_rev),
@@ -461,7 +595,8 @@ router.put('/:id', requireAuth, async (req, res) => {
       UPDATE rapports
       SET observation = $1,
           updated_at = NOW(),
-          last_modified_by = $2
+          last_modified_by = $2,
+          last_modified_at = NOW()
       WHERE id = $3
       `,
       [observation || null, userId, id]
@@ -553,7 +688,6 @@ router.put('/:id', requireAuth, async (req, res) => {
       ]
     );
 
-    // Synchronise fond_mm seulement si le rapport modifié est celui du jour
     if (isTodayString(rapport.date_rapport)) {
       await syncFondMmFromSoldes(client, siteId, soldesPayload);
     }
@@ -567,7 +701,11 @@ router.put('/:id', requireAuth, async (req, res) => {
     );
 
     await client.query('COMMIT');
-    res.json({ ok: true });
+
+    const saved = await getRapportBaseById(db, id, siteId);
+    const enriched = await enrichRapport(db, saved, req.session);
+
+    res.json({ ok: true, rapport: enriched });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Erreur modification rapport:', err);

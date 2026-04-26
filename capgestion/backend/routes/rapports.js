@@ -132,7 +132,6 @@ async function getRapportBaseById(clientOrDb, id, siteId) {
       r.created_at,
       r.updated_at,
       r.last_modified_by,
-      r.last_modified_at,
 
       gu.nom AS gerant_nom,
       mu.nom AS last_modified_by_nom,
@@ -186,7 +185,6 @@ async function getRapportBaseByDate(clientOrDb, dateRapport, siteId) {
       r.created_at,
       r.updated_at,
       r.last_modified_by,
-      r.last_modified_at,
 
       gu.nom AS gerant_nom,
       mu.nom AS last_modified_by_nom,
@@ -258,7 +256,6 @@ async function enrichRapport(clientOrDb, rapport, session) {
 
 /**
  * POST /api/rapports
- * Créer un rapport journalier
  */
 router.post('/', requireAuth, async (req, res) => {
   const siteId = req.session.siteId;
@@ -293,10 +290,9 @@ router.post('/', requireAuth, async (req, res) => {
         gerant_id,
         date_rapport,
         observation,
-        last_modified_by,
-        last_modified_at
+        last_modified_by
       )
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING id
       `,
       [siteId, gerantId, date_rapport, observation || null, gerantId]
@@ -370,11 +366,7 @@ router.post('/', requireAuth, async (req, res) => {
           INSERT INTO rapport_depenses (rapport_id, description, montant)
           VALUES ($1, $2, $3)
           `,
-          [
-            rapportId,
-            dep.description,
-            toPositiveInt(dep.montant)
-          ]
+          [rapportId, dep.description, toPositiveInt(dep.montant)]
         );
       }
     }
@@ -431,10 +423,8 @@ router.post('/', requireAuth, async (req, res) => {
 
 /**
  * GET /api/rapports
- * Liste des rapports
- * Filtres supportés :
- * - ?mois=YYYY-MM
- * - ?date=YYYY-MM-DD
+ * ?mois=YYYY-MM
+ * ?date=YYYY-MM-DD
  */
 router.get('/', requireAuth, async (req, res) => {
   const siteId = req.session.siteId;
@@ -452,7 +442,6 @@ router.get('/', requireAuth, async (req, res) => {
         r.updated_at,
         r.gerant_id,
         r.last_modified_by,
-        r.last_modified_at,
 
         gu.nom AS gerant_nom,
         mu.nom AS last_modified_by_nom,
@@ -503,7 +492,6 @@ router.get('/', requireAuth, async (req, res) => {
 
 /**
  * GET /api/rapports/:id
- * Détail d'un rapport
  */
 router.get('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
@@ -526,7 +514,6 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 /**
  * PUT /api/rapports/:id
- * Modifier un rapport
  */
 router.put('/:id', requireAuth, async (req, res) => {
   const { id } = req.params;
@@ -595,8 +582,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       UPDATE rapports
       SET observation = $1,
           updated_at = NOW(),
-          last_modified_by = $2,
-          last_modified_at = NOW()
+          last_modified_by = $2
       WHERE id = $3
       `,
       [observation || null, userId, id]

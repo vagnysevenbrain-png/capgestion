@@ -1,41 +1,39 @@
 const express = require('express');
 const db = require('../db');
-const { requireAuth, requireProprietaire } = require('../middleware/auth');
+const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
 function toPositiveInt(value, defaultValue = 0) {
     const n = Number(value);
-    if (!Number.isFinite(n) || n <= 0) return defaultValue;
+    if (!Number.isFinite(n) || n < 0) return defaultValue;
     return Math.round(n);
 }
 
-/**
- * GET /api/comptes-clients/test-auth
- * Vérification simple de la session sur ce module
- */
-router.get('/test-auth', requireAuth, async (req, res) => {
-    res.json({
-        ok: true,
-        userId: req.session.userId,
-        siteId: req.session.siteId,
-        role: req.session.role
-    });
-});
+function parseActif(value) {
+    if (value === true || value === 'true' || value === 1 || value === '1') return true;
+    if (value === false || value === 'false' || value === 0 || value === '0') return false;
+    return null;
+}
 
 /**
  * GET /api/comptes-clients
- * Liste des comptes clients
- * Query params:
- * - actif=true|false
- * - q=texte de recherche
  */
 router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
-    const { actif, q } = req.query;
+    const actifFilter = parseActif(req.query.actif);
 
     try {
-        let query = `
+        const params = [siteId];
+        let where = `cc.site_id = $1 AND cc.deleted_at IS NULL`;
+
+        if (actifFilter !== null) {
+            params.push(actifFilter);
+            where += ` AND cc.actif = $${params.length}`;
+        }
+
+        const result = await db.query(
+            `
       SELECT
         cc.id,
         cc.site_id,
@@ -43,42 +41,28 @@ router.get('/', requireAuth, async (req, res) => {
         cc.telephone,
         cc.observation,
         cc.actif,
-        cc.deleted_at,
+        cc.created_by,
         cc.created_at,
         cc.updated_at,
-        COALESCE((
-          SELECT SUM(
-            CASE
-              WHEN m.type_mvt IN ('credit', 'ajustement_plus') THEN m.montant
-              WHEN m.type_mvt IN ('remboursement', 'avance', 'ajustement_moins') THEN -m.montant
-              ELSE 0
-            END
-          )
-          FROM compte_client_mouvements m
-          WHERE m.compte_client_id = cc.id
-        ), 0) AS solde_compte
+        COALESCE(SUM(
+          CASE
+            WHEN m.type_mvt IN ('credit', 'avance', 'ajustement_plus') THEN m.montant
+            WHEN m.type_mvt IN ('remboursement', 'ajustement_moins') THEN -m.montant
+            ELSE 0
+          END
+        ), 0) AS solde_courant
       FROM comptes_clients cc
-      WHERE cc.site_id = $1
-        AND cc.deleted_at IS NULL
-    `;
-        const params = [siteId];
+      LEFT JOIN compte_client_mouvements m
+        ON m.compte_client_id = cc.id
+      WHERE ${where}
+      GROUP BY
+        cc.id, cc.site_id, cc.nom, cc.telephone, cc.observation,
+        cc.actif, cc.created_by, cc.created_at, cc.updated_at
+      ORDER BY cc.nom ASC
+      `,
+            params
+        );
 
-        if (actif === 'true') {
-            params.push(true);
-            query += ` AND cc.actif = $${params.length}`;
-        } else if (actif === 'false') {
-            params.push(false);
-            query += ` AND cc.actif = $${params.length}`;
-        }
-
-        if (q && q.trim()) {
-            params.push(`%${q.trim().toLowerCase()}%`);
-            query += ` AND LOWER(cc.nom) LIKE $${params.length}`;
-        }
-
-        query += ` ORDER BY cc.nom ASC`;
-
-        const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
         console.error('Erreur liste comptes clients:', err);
@@ -87,89 +71,15 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 /**
- * GET /api/comptes-clients/:id
- * Détail d'un compte + mouvements
- */
-router.get('/:id', requireAuth, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-
-    try {
-        const compteRes = await db.query(
-            `
-      SELECT
-        cc.id,
-        cc.site_id,
-        cc.nom,
-        cc.telephone,
-        cc.observation,
-        cc.actif,
-        cc.deleted_at,
-        cc.created_at,
-        cc.updated_at,
-        COALESCE((
-          SELECT SUM(
-            CASE
-              WHEN m.type_mvt IN ('credit', 'ajustement_plus') THEN m.montant
-              WHEN m.type_mvt IN ('remboursement', 'avance', 'ajustement_moins') THEN -m.montant
-              ELSE 0
-            END
-          )
-          FROM compte_client_mouvements m
-          WHERE m.compte_client_id = cc.id
-        ), 0) AS solde_compte
-      FROM comptes_clients cc
-      WHERE cc.id = $1
-        AND cc.site_id = $2
-        AND cc.deleted_at IS NULL
-      `,
-            [id, siteId]
-        );
-
-        if (compteRes.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Compte client introuvable.' });
-        }
-
-        const mouvementsRes = await db.query(
-            `
-      SELECT
-        id,
-        compte_client_id,
-        date_mouvement,
-        type_mvt,
-        montant,
-        mode_paiement,
-        note,
-        cree_par,
-        created_at
-      FROM compte_client_mouvements
-      WHERE compte_client_id = $1
-      ORDER BY date_mouvement DESC, id DESC
-      `,
-            [id]
-        );
-
-        res.json({
-            compte: compteRes.rows[0],
-            mouvements: mouvementsRes.rows
-        });
-    } catch (err) {
-        console.error('Erreur détail compte client:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
  * POST /api/comptes-clients
- * Créer un compte client
  */
 router.post('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
-    const userId = req.session.userId;
+    const createdBy = req.session.userId || null;
     const { nom, telephone, observation } = req.body;
 
-    if (!nom || !nom.trim()) {
-        return res.status(400).json({ erreur: 'Nom requis.' });
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom du client est obligatoire.' });
     }
 
     try {
@@ -180,31 +90,24 @@ router.post('/', requireAuth, async (req, res) => {
         nom,
         telephone,
         observation,
+        actif,
         created_by
       )
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING
-        id,
-        site_id,
-        nom,
-        telephone,
-        observation,
-        actif,
-        created_at,
-        updated_at
+      VALUES ($1, $2, $3, $4, true, $5)
+      RETURNING *
       `,
             [
                 siteId,
-                nom.trim(),
+                String(nom).trim(),
                 telephone?.trim() || null,
                 observation?.trim() || null,
-                userId
+                createdBy
             ]
         );
 
         res.status(201).json({
             ok: true,
-            compte: result.rows[0]
+            client: result.rows[0]
         });
     } catch (err) {
         console.error('Erreur création compte client:', err);
@@ -213,16 +116,111 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 /**
+ * PUT /api/comptes-clients/:id
+ */
+router.put('/:id', requireAuth, async (req, res) => {
+    const siteId = req.session.siteId;
+    const id = Number(req.params.id);
+    const { nom, telephone, observation } = req.body;
+
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID client invalide.' });
+    }
+
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom du client est obligatoire.' });
+    }
+
+    try {
+        const result = await db.query(
+            `
+      UPDATE comptes_clients
+      SET nom = $1,
+          telephone = $2,
+          observation = $3,
+          updated_at = NOW()
+      WHERE id = $4
+        AND site_id = $5
+        AND deleted_at IS NULL
+      RETURNING *
+      `,
+            [
+                String(nom).trim(),
+                telephone?.trim() || null,
+                observation?.trim() || null,
+                id,
+                siteId
+            ]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ erreur: 'Client introuvable.' });
+        }
+
+        res.json({
+            ok: true,
+            client: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Erreur modification compte client:', err);
+        res.status(500).json({ erreur: 'Erreur serveur.' });
+    }
+});
+
+/**
+ * PUT /api/comptes-clients/:id/statut
+ */
+router.put('/:id/statut', requireAuth, async (req, res) => {
+    const siteId = req.session.siteId;
+    const id = Number(req.params.id);
+    const actif = parseActif(req.body.actif);
+
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID client invalide.' });
+    }
+
+    if (actif === null) {
+        return res.status(400).json({ erreur: 'Valeur actif invalide.' });
+    }
+
+    try {
+        const result = await db.query(
+            `
+      UPDATE comptes_clients
+      SET actif = $1,
+          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
+          updated_at = NOW()
+      WHERE id = $2
+        AND site_id = $3
+      RETURNING *
+      `,
+            [actif, id, siteId]
+        );
+
+        if (!result.rows.length) {
+            return res.status(404).json({ erreur: 'Client introuvable.' });
+        }
+
+        res.json({
+            ok: true,
+            client: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Erreur changement statut client:', err);
+        res.status(500).json({ erreur: 'Erreur serveur.' });
+    }
+});
+
+/**
  * POST /api/comptes-clients/:id/mouvements
- * Ajouter un mouvement sur un compte client
  */
 router.post('/:id/mouvements', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
-    const userId = req.session.userId;
-    const { id } = req.params;
-    const { type_mvt, montant, mode_paiement, note, date_mouvement } = req.body;
+    const creePar = req.session.userId || null;
+    const compteClientId = Number(req.params.id);
+    const { type_mvt, montant, mode_paiement, note } = req.body;
 
-    const typesAutorises = [
+    const typesValides = [
         'credit',
         'remboursement',
         'avance',
@@ -230,71 +228,54 @@ router.post('/:id/mouvements', requireAuth, async (req, res) => {
         'ajustement_moins'
     ];
 
-    if (!typesAutorises.includes(type_mvt)) {
+    if (!compteClientId) {
+        return res.status(400).json({ erreur: 'ID client invalide.' });
+    }
+
+    if (!typesValides.includes(type_mvt)) {
         return res.status(400).json({ erreur: 'Type de mouvement invalide.' });
     }
 
-    const montantNum = toPositiveInt(montant, 0);
-    if (montantNum <= 0) {
+    const montantInt = toPositiveInt(montant, -1);
+    if (montantInt < 0) {
         return res.status(400).json({ erreur: 'Montant invalide.' });
     }
 
     try {
-        const compteRes = await db.query(
+        const compte = await db.query(
             `
-      SELECT id, actif, deleted_at
+      SELECT id
       FROM comptes_clients
       WHERE id = $1
         AND site_id = $2
       `,
-            [id, siteId]
+            [compteClientId, siteId]
         );
 
-        if (compteRes.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Compte client introuvable.' });
-        }
-
-        const compte = compteRes.rows[0];
-
-        if (compte.deleted_at) {
-            return res.status(400).json({ erreur: 'Compte supprimé.' });
-        }
-
-        if (!compte.actif) {
-            return res.status(400).json({ erreur: 'Compte inactif.' });
+        if (!compte.rows.length) {
+            return res.status(404).json({ erreur: 'Client introuvable.' });
         }
 
         const result = await db.query(
             `
       INSERT INTO compte_client_mouvements (
         compte_client_id,
-        date_mouvement,
         type_mvt,
         montant,
         mode_paiement,
         note,
         cree_par
       )
-      VALUES ($1, COALESCE($2, NOW()), $3, $4, $5, $6, $7)
-      RETURNING
-        id,
-        compte_client_id,
-        date_mouvement,
-        type_mvt,
-        montant,
-        mode_paiement,
-        note,
-        cree_par,
-        created_at
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
       `,
             [
-                id,
-                date_mouvement || null,
+                compteClientId,
                 type_mvt,
-                montantNum,
+                montantInt,
                 mode_paiement?.trim() || null,
                 note?.trim() || null,
-                userId
+                creePar
             ]
         );
 
@@ -303,88 +284,7 @@ router.post('/:id/mouvements', requireAuth, async (req, res) => {
             mouvement: result.rows[0]
         });
     } catch (err) {
-        console.error('Erreur ajout mouvement compte client:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * PATCH /api/comptes-clients/:id/statut
- * Activer / désactiver un compte client
- * Réservé au propriétaire
- */
-router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-    const { actif } = req.body;
-
-    if (typeof actif !== 'boolean') {
-        return res.status(400).json({ erreur: 'Le champ actif doit être true ou false.' });
-    }
-
-    try {
-        const result = await db.query(
-            `
-      UPDATE comptes_clients
-      SET actif = $1,
-          updated_at = NOW()
-      WHERE id = $2
-        AND site_id = $3
-        AND deleted_at IS NULL
-      RETURNING id, nom, actif, updated_at
-      `,
-            [actif, id, siteId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Compte client introuvable.' });
-        }
-
-        res.json({
-            ok: true,
-            compte: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Erreur changement statut compte client:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * DELETE /api/comptes-clients/:id
- * Suppression logique
- * Réservé au propriétaire
- */
-router.delete('/:id', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-
-    try {
-        const result = await db.query(
-            `
-      UPDATE comptes_clients
-      SET deleted_at = NOW(),
-          actif = FALSE,
-          updated_at = NOW()
-      WHERE id = $1
-        AND site_id = $2
-        AND deleted_at IS NULL
-      RETURNING id, nom
-      `,
-            [id, siteId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Compte client introuvable.' });
-        }
-
-        res.json({
-            ok: true,
-            message: 'Compte client supprimé.',
-            compte: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Erreur suppression compte client:', err);
+        console.error('Erreur création mouvement compte client:', err);
         res.status(500).json({ erreur: 'Erreur serveur.' });
     }
 });

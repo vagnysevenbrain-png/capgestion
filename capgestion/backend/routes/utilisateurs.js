@@ -1,38 +1,50 @@
 const express = require('express');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { requireAuth, requireProprietaire } = require('../middleware/auth');
 
 const router = express.Router();
 
+function parseActif(value) {
+    if (value === true || value === 'true' || value === 1 || value === '1') return true;
+    if (value === false || value === 'false' || value === 0 || value === '0') return false;
+    return null;
+}
+
 /**
  * GET /api/utilisateurs
- * Liste des utilisateurs du site
- * Réservé au propriétaire
  */
 router.get('/', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
+    const actifFilter = parseActif(req.query.actif);
 
     try {
+        const params = [siteId];
+        let where = `u.site_id = $1 AND u.deleted_at IS NULL`;
+
+        if (actifFilter !== null) {
+            params.push(actifFilter);
+            where += ` AND u.actif = $${params.length}`;
+        }
+
         const result = await db.query(
             `
       SELECT
-        id,
-        site_id,
-        employe_id,
-        nom,
-        email,
-        role,
-        actif,
-        must_change_pwd,
-        deleted_at,
-        created_at
-      FROM utilisateurs
-      WHERE site_id = $1
-        AND deleted_at IS NULL
-      ORDER BY created_at DESC, nom ASC
+        u.id,
+        u.site_id,
+        u.employe_id,
+        u.nom,
+        u.email,
+        u.role,
+        u.actif,
+        u.must_change_pwd,
+        u.created_at,
+        u.updated_at
+      FROM utilisateurs u
+      WHERE ${where}
+      ORDER BY u.nom ASC
       `,
-            [siteId]
+            params
         );
 
         res.json(result.rows);
@@ -44,44 +56,55 @@ router.get('/', requireAuth, requireProprietaire, async (req, res) => {
 
 /**
  * POST /api/utilisateurs
- * Créer un gérant
- * Réservé au propriétaire
  */
 router.post('/', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
     const { nom, email, mot_de_passe, role, employe_id } = req.body;
 
-    if (!nom || !nom.trim()) {
-        return res.status(400).json({ erreur: 'Nom requis.' });
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom est obligatoire.' });
     }
 
-    if (!email || !email.trim()) {
-        return res.status(400).json({ erreur: 'Email requis.' });
+    if (!email || !String(email).trim()) {
+        return res.status(400).json({ erreur: 'L’email est obligatoire.' });
     }
 
-    if (!mot_de_passe || mot_de_passe.length < 6) {
-        return res.status(400).json({ erreur: 'Mot de passe trop court (minimum 6 caractères).' });
+    if (!mot_de_passe || String(mot_de_passe).length < 6) {
+        return res.status(400).json({ erreur: 'Le mot de passe doit contenir au moins 6 caractères.' });
     }
 
-    const roleFinal = role || 'gerant';
-
-    if (!['gerant', 'proprietaire'].includes(roleFinal)) {
+    if (!['proprietaire', 'gerant'].includes(role)) {
         return res.status(400).json({ erreur: 'Rôle invalide.' });
     }
 
     try {
-        const emailNormalise = email.trim().toLowerCase();
+        const emailNorm = String(email).trim().toLowerCase();
 
-        const existe = await db.query(
+        const emailCheck = await db.query(
             `SELECT id FROM utilisateurs WHERE email = $1`,
-            [emailNormalise]
+            [emailNorm]
         );
-
-        if (existe.rows.length > 0) {
+        if (emailCheck.rows.length) {
             return res.status(409).json({ erreur: 'Cet email existe déjà.' });
         }
 
-        const hash = await bcrypt.hash(mot_de_passe, 10);
+        if (employe_id) {
+            const employeCheck = await db.query(
+                `
+        SELECT id
+        FROM employes
+        WHERE id = $1
+          AND site_id = $2
+        `,
+                [Number(employe_id), siteId]
+            );
+
+            if (!employeCheck.rows.length) {
+                return res.status(400).json({ erreur: 'Employé lié introuvable.' });
+            }
+        }
+
+        const hash = await bcrypt.hash(String(mot_de_passe), 10);
 
         const result = await db.query(
             `
@@ -95,16 +118,16 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         actif,
         must_change_pwd
       )
-      VALUES ($1, $2, $3, $4, $5, $6, TRUE, FALSE)
-      RETURNING id, nom, email, role, actif, created_at
+      VALUES ($1,$2,$3,$4,$5,$6,true,false)
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
       `,
             [
                 siteId,
-                employe_id || null,
-                nom.trim(),
-                emailNormalise,
+                employe_id ? Number(employe_id) : null,
+                String(nom).trim(),
+                emailNorm,
                 hash,
-                roleFinal
+                role
             ]
         );
 
@@ -119,33 +142,169 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
 });
 
 /**
- * PATCH /api/utilisateurs/:id/statut
- * Activer / désactiver un utilisateur
- * Réservé au propriétaire
+ * PUT /api/utilisateurs/:id
  */
-router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
+router.put('/:id', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
-    const { id } = req.params;
-    const { actif } = req.body;
+    const id = Number(req.params.id);
+    const { nom, email, mot_de_passe, role, employe_id } = req.body;
 
-    if (typeof actif !== 'boolean') {
-        return res.status(400).json({ erreur: 'Le champ actif doit être true ou false.' });
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID utilisateur invalide.' });
+    }
+
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom est obligatoire.' });
+    }
+
+    if (!email || !String(email).trim()) {
+        return res.status(400).json({ erreur: 'L’email est obligatoire.' });
+    }
+
+    if (!['proprietaire', 'gerant'].includes(role)) {
+        return res.status(400).json({ erreur: 'Rôle invalide.' });
+    }
+
+    try {
+        const emailNorm = String(email).trim().toLowerCase();
+
+        const currentRes = await db.query(
+            `
+      SELECT *
+      FROM utilisateurs
+      WHERE id = $1
+        AND site_id = $2
+      `,
+            [id, siteId]
+        );
+
+        if (!currentRes.rows.length) {
+            return res.status(404).json({ erreur: 'Utilisateur introuvable.' });
+        }
+
+        const current = currentRes.rows[0];
+
+        const emailCheck = await db.query(
+            `
+      SELECT id
+      FROM utilisateurs
+      WHERE email = $1
+        AND id <> $2
+      `,
+            [emailNorm, id]
+        );
+        if (emailCheck.rows.length) {
+            return res.status(409).json({ erreur: 'Cet email existe déjà.' });
+        }
+
+        if (employe_id) {
+            const employeCheck = await db.query(
+                `
+        SELECT id
+        FROM employes
+        WHERE id = $1
+          AND site_id = $2
+        `,
+                [Number(employe_id), siteId]
+            );
+
+            if (!employeCheck.rows.length) {
+                return res.status(400).json({ erreur: 'Employé lié introuvable.' });
+            }
+
+            const employeUnique = await db.query(
+                `
+        SELECT id
+        FROM utilisateurs
+        WHERE employe_id = $1
+          AND id <> $2
+        `,
+                [Number(employe_id), id]
+            );
+
+            if (employeUnique.rows.length) {
+                return res.status(409).json({ erreur: 'Cet employé est déjà lié à un autre utilisateur.' });
+            }
+        }
+
+        let passwordHash = current.mot_de_passe;
+        if (mot_de_passe && String(mot_de_passe).trim()) {
+            if (String(mot_de_passe).length < 6) {
+                return res.status(400).json({ erreur: 'Le mot de passe doit contenir au moins 6 caractères.' });
+            }
+            passwordHash = await bcrypt.hash(String(mot_de_passe), 10);
+        }
+
+        const result = await db.query(
+            `
+      UPDATE utilisateurs
+      SET employe_id = $1,
+          nom = $2,
+          email = $3,
+          mot_de_passe = $4,
+          role = $5,
+          updated_at = NOW()
+      WHERE id = $6
+        AND site_id = $7
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
+      `,
+            [
+                employe_id ? Number(employe_id) : null,
+                String(nom).trim(),
+                emailNorm,
+                passwordHash,
+                role,
+                id,
+                siteId
+            ]
+        );
+
+        res.json({
+            ok: true,
+            utilisateur: result.rows[0]
+        });
+    } catch (err) {
+        console.error('Erreur modification utilisateur:', err);
+        res.status(500).json({ erreur: 'Erreur serveur.' });
+    }
+});
+
+/**
+ * PUT /api/utilisateurs/:id/statut
+ */
+router.put('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
+    const siteId = req.session.siteId;
+    const currentUserId = req.session.userId || null;
+    const id = Number(req.params.id);
+    const actif = parseActif(req.body.actif);
+
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID utilisateur invalide.' });
+    }
+
+    if (actif === null) {
+        return res.status(400).json({ erreur: 'Valeur actif invalide.' });
+    }
+
+    if (currentUserId && id === currentUserId && actif === false) {
+        return res.status(400).json({ erreur: 'Tu ne peux pas désactiver ton propre compte.' });
     }
 
     try {
         const result = await db.query(
             `
       UPDATE utilisateurs
-      SET actif = $1, updated_at = NOW()
+      SET actif = $1,
+          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
+          updated_at = NOW()
       WHERE id = $2
         AND site_id = $3
-        AND deleted_at IS NULL
-      RETURNING id, nom, email, role, actif
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
       `,
             [actif, id, siteId]
         );
 
-        if (result.rows.length === 0) {
+        if (!result.rows.length) {
             return res.status(404).json({ erreur: 'Utilisateur introuvable.' });
         }
 
@@ -155,90 +314,6 @@ router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) =
         });
     } catch (err) {
         console.error('Erreur changement statut utilisateur:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * PATCH /api/utilisateurs/:id/reset-password
- * Réinitialiser le mot de passe
- * Réservé au propriétaire
- */
-router.patch('/:id/reset-password', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-    const { mot_de_passe } = req.body;
-
-    if (!mot_de_passe || mot_de_passe.length < 6) {
-        return res.status(400).json({ erreur: 'Mot de passe trop court (minimum 6 caractères).' });
-    }
-
-    try {
-        const hash = await bcrypt.hash(mot_de_passe, 10);
-
-        const result = await db.query(
-            `
-      UPDATE utilisateurs
-      SET mot_de_passe = $1,
-          must_change_pwd = FALSE,
-          updated_at = NOW()
-      WHERE id = $2
-        AND site_id = $3
-        AND deleted_at IS NULL
-      RETURNING id, nom, email
-      `,
-            [hash, id, siteId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Utilisateur introuvable.' });
-        }
-
-        res.json({
-            ok: true,
-            utilisateur: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Erreur reset mot de passe:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * DELETE /api/utilisateurs/:id
- * Suppression logique
- * Réservé au propriétaire
- */
-router.delete('/:id', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-
-    try {
-        const result = await db.query(
-            `
-      UPDATE utilisateurs
-      SET deleted_at = NOW(),
-          actif = FALSE,
-          updated_at = NOW()
-      WHERE id = $1
-        AND site_id = $2
-        AND deleted_at IS NULL
-      RETURNING id, nom, email
-      `,
-            [id, siteId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Utilisateur introuvable.' });
-        }
-
-        res.json({
-            ok: true,
-            message: 'Utilisateur supprimé.',
-            utilisateur: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Erreur suppression utilisateur:', err);
         res.status(500).json({ erreur: 'Erreur serveur.' });
     }
 });

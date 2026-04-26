@@ -10,44 +10,42 @@ function toPositiveInt(value, defaultValue = 0) {
     return Math.round(n);
 }
 
+function parseActif(value) {
+    if (value === true || value === 'true' || value === 1 || value === '1') return true;
+    if (value === false || value === 'false' || value === 0 || value === '0') return false;
+    return null;
+}
+
+function monthToDate(mois) {
+    return `${mois}-01`;
+}
+
 /**
  * GET /api/employes
- * Liste des employés du site
- * Réservé au propriétaire
  */
-router.get('/', requireAuth, requireProprietaire, async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
-    const { actif } = req.query;
+    const actifFilter = parseActif(req.query.actif);
 
     try {
-        let query = `
-      SELECT
-        id,
-        site_id,
-        nom,
-        poste,
-        salaire_base,
-        actif,
-        deleted_at,
-        created_at,
-        updated_at
-      FROM employes
-      WHERE site_id = $1
-        AND deleted_at IS NULL
-    `;
         const params = [siteId];
+        let where = `site_id = $1 AND deleted_at IS NULL`;
 
-        if (actif === 'true') {
-            params.push(true);
-            query += ` AND actif = $${params.length}`;
-        } else if (actif === 'false') {
-            params.push(false);
-            query += ` AND actif = $${params.length}`;
+        if (actifFilter !== null) {
+            params.push(actifFilter);
+            where += ` AND actif = $${params.length}`;
         }
 
-        query += ` ORDER BY nom ASC`;
+        const result = await db.query(
+            `
+      SELECT *
+      FROM employes
+      WHERE ${where}
+      ORDER BY nom ASC
+      `,
+            params
+        );
 
-        const result = await db.query(query, params);
         res.json(result.rows);
     } catch (err) {
         console.error('Erreur liste employés:', err);
@@ -57,15 +55,13 @@ router.get('/', requireAuth, requireProprietaire, async (req, res) => {
 
 /**
  * POST /api/employes
- * Créer un employé
- * Réservé au propriétaire
  */
 router.post('/', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
     const { nom, poste, salaire_base } = req.body;
 
-    if (!nom || !nom.trim()) {
-        return res.status(400).json({ erreur: 'Nom requis.' });
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom de l’employé est obligatoire.' });
     }
 
     try {
@@ -75,14 +71,15 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         site_id,
         nom,
         poste,
-        salaire_base
+        salaire_base,
+        actif
       )
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, nom, poste, salaire_base, actif, created_at
+      VALUES ($1, $2, $3, $4, true)
+      RETURNING *
       `,
             [
                 siteId,
-                nom.trim(),
+                String(nom).trim(),
                 poste?.trim() || null,
                 toPositiveInt(salaire_base)
             ]
@@ -99,17 +96,19 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
 });
 
 /**
- * PATCH /api/employes/:id
- * Modifier les infos d'un employé
- * Réservé au propriétaire
+ * PUT /api/employes/:id
  */
-router.patch('/:id', requireAuth, requireProprietaire, async (req, res) => {
+router.put('/:id', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
-    const { id } = req.params;
+    const id = Number(req.params.id);
     const { nom, poste, salaire_base } = req.body;
 
-    if (!nom || !nom.trim()) {
-        return res.status(400).json({ erreur: 'Nom requis.' });
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID employé invalide.' });
+    }
+
+    if (!nom || !String(nom).trim()) {
+        return res.status(400).json({ erreur: 'Le nom de l’employé est obligatoire.' });
     }
 
     try {
@@ -122,11 +121,10 @@ router.patch('/:id', requireAuth, requireProprietaire, async (req, res) => {
           updated_at = NOW()
       WHERE id = $4
         AND site_id = $5
-        AND deleted_at IS NULL
-      RETURNING id, nom, poste, salaire_base, actif, updated_at
+      RETURNING *
       `,
             [
-                nom.trim(),
+                String(nom).trim(),
                 poste?.trim() || null,
                 toPositiveInt(salaire_base),
                 id,
@@ -134,7 +132,7 @@ router.patch('/:id', requireAuth, requireProprietaire, async (req, res) => {
             ]
         );
 
-        if (result.rows.length === 0) {
+        if (!result.rows.length) {
             return res.status(404).json({ erreur: 'Employé introuvable.' });
         }
 
@@ -149,17 +147,19 @@ router.patch('/:id', requireAuth, requireProprietaire, async (req, res) => {
 });
 
 /**
- * PATCH /api/employes/:id/statut
- * Activer / désactiver un employé
- * Réservé au propriétaire
+ * PUT /api/employes/:id/statut
  */
-router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
+router.put('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
-    const { id } = req.params;
-    const { actif } = req.body;
+    const id = Number(req.params.id);
+    const actif = parseActif(req.body.actif);
 
-    if (typeof actif !== 'boolean') {
-        return res.status(400).json({ erreur: 'Le champ actif doit être true ou false.' });
+    if (!id) {
+        return res.status(400).json({ erreur: 'ID employé invalide.' });
+    }
+
+    if (actif === null) {
+        return res.status(400).json({ erreur: 'Valeur actif invalide.' });
     }
 
     try {
@@ -167,16 +167,16 @@ router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) =
             `
       UPDATE employes
       SET actif = $1,
+          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
           updated_at = NOW()
       WHERE id = $2
         AND site_id = $3
-        AND deleted_at IS NULL
-      RETURNING id, nom, actif
+      RETURNING *
       `,
             [actif, id, siteId]
         );
 
-        if (result.rows.length === 0) {
+        if (!result.rows.length) {
             return res.status(404).json({ erreur: 'Employé introuvable.' });
         }
 
@@ -191,127 +191,43 @@ router.patch('/:id/statut', requireAuth, requireProprietaire, async (req, res) =
 });
 
 /**
- * DELETE /api/employes/:id
- * Suppression logique
- * Réservé au propriétaire
- */
-router.delete('/:id', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const { id } = req.params;
-
-    try {
-        const result = await db.query(
-            `
-      UPDATE employes
-      SET deleted_at = NOW(),
-          actif = FALSE,
-          updated_at = NOW()
-      WHERE id = $1
-        AND site_id = $2
-        AND deleted_at IS NULL
-      RETURNING id, nom
-      `,
-            [id, siteId]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ erreur: 'Employé introuvable.' });
-        }
-
-        res.json({
-            ok: true,
-            message: 'Employé supprimé.',
-            employe: result.rows[0]
-        });
-    } catch (err) {
-        console.error('Erreur suppression employé:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * GET /api/employes/salaires/:mois
- * Liste des salaires d'un mois (YYYY-MM)
- * Réservé au propriétaire
- */
-router.get('/salaires/:mois', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const mois = `${req.params.mois}-01`;
-
-    try {
-        const result = await db.query(
-            `
-      SELECT
-        sm.id,
-        e.id AS employe_id,
-        e.nom,
-        e.poste,
-        sm.mois,
-        sm.salaire_base_snapshot,
-        sm.bonus,
-        sm.retenues,
-        sm.salaire_net,
-        sm.statut,
-        sm.observation,
-        sm.updated_at
-      FROM salaires_mois sm
-      JOIN employes e ON e.id = sm.employe_id
-      WHERE e.site_id = $1
-        AND sm.mois = $2
-      ORDER BY e.nom ASC
-      `,
-            [siteId, mois]
-        );
-
-        res.json(result.rows);
-    } catch (err) {
-        console.error('Erreur lecture salaires du mois:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
  * POST /api/employes/:id/salaires
- * Créer ou mettre à jour le salaire mensuel d'un employé
- * Réservé au propriétaire
  */
 router.post('/:id/salaires', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
-    const userId = req.session.userId;
-    const { id } = req.params;
+    const creePar = req.session.userId || null;
+    const employeId = Number(req.params.id);
     const { mois, bonus, retenues, statut, observation } = req.body;
+
+    if (!employeId) {
+        return res.status(400).json({ erreur: 'ID employé invalide.' });
+    }
 
     if (!mois || !/^\d{4}-\d{2}$/.test(mois)) {
         return res.status(400).json({ erreur: 'Le mois doit être au format YYYY-MM.' });
     }
 
-    const bonusNum = toPositiveInt(bonus);
-    const retenuesNum = toPositiveInt(retenues);
-    const statutFinal = statut || 'en_attente';
-
-    if (!['en_attente', 'valide', 'paye'].includes(statutFinal)) {
-        return res.status(400).json({ erreur: 'Statut invalide.' });
-    }
-
     try {
-        const empRes = await db.query(
+        const employeRes = await db.query(
             `
-      SELECT id, nom, salaire_base
+      SELECT *
       FROM employes
       WHERE id = $1
         AND site_id = $2
-        AND deleted_at IS NULL
       `,
-            [id, siteId]
+            [employeId, siteId]
         );
 
-        if (empRes.rows.length === 0) {
+        if (!employeRes.rows.length) {
             return res.status(404).json({ erreur: 'Employé introuvable.' });
         }
 
-        const employe = empRes.rows[0];
-        const salaireBase = Number(employe.salaire_base) || 0;
-        const salaireNet = Math.max(0, salaireBase + bonusNum - retenuesNum);
+        const employe = employeRes.rows[0];
+        const base = Number(employe.salaire_base || 0);
+        const bonusInt = toPositiveInt(bonus);
+        const retenuesInt = toPositiveInt(retenues);
+        const net = Math.max(0, base + bonusInt - retenuesInt);
+        const moisDate = monthToDate(mois);
 
         const result = await db.query(
             `
@@ -326,7 +242,7 @@ router.post('/:id/salaires', requireAuth, requireProprietaire, async (req, res) 
         observation,
         cree_par
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
       ON CONFLICT (employe_id, mois)
       DO UPDATE SET
         salaire_base_snapshot = EXCLUDED.salaire_base_snapshot,
@@ -335,28 +251,19 @@ router.post('/:id/salaires', requireAuth, requireProprietaire, async (req, res) 
         salaire_net = EXCLUDED.salaire_net,
         statut = EXCLUDED.statut,
         observation = EXCLUDED.observation,
-        updated_at = NOW()
-      RETURNING
-        id,
-        employe_id,
-        mois,
-        salaire_base_snapshot,
-        bonus,
-        retenues,
-        salaire_net,
-        statut,
-        observation
+        cree_par = EXCLUDED.cree_par
+      RETURNING *
       `,
             [
-                id,
-                `${mois}-01`,
-                salaireBase,
-                bonusNum,
-                retenuesNum,
-                salaireNet,
-                statutFinal,
+                employeId,
+                moisDate,
+                base,
+                bonusInt,
+                retenuesInt,
+                net,
+                statut || 'valide',
                 observation?.trim() || null,
-                userId
+                creePar
             ]
         );
 
@@ -365,38 +272,7 @@ router.post('/:id/salaires', requireAuth, requireProprietaire, async (req, res) 
             salaire: result.rows[0]
         });
     } catch (err) {
-        console.error('Erreur création/mise à jour salaire mensuel:', err);
-        res.status(500).json({ erreur: 'Erreur serveur.' });
-    }
-});
-
-/**
- * GET /api/employes/salaires/:mois/total
- * Total des salaires nets du mois pour le site
- * Réservé au propriétaire
- */
-router.get('/salaires/:mois/total', requireAuth, requireProprietaire, async (req, res) => {
-    const siteId = req.session.siteId;
-    const mois = `${req.params.mois}-01`;
-
-    try {
-        const result = await db.query(
-            `
-      SELECT COALESCE(SUM(sm.salaire_net), 0) AS total_salaires
-      FROM salaires_mois sm
-      JOIN employes e ON e.id = sm.employe_id
-      WHERE e.site_id = $1
-        AND sm.mois = $2
-      `,
-            [siteId, mois]
-        );
-
-        res.json({
-            mois: req.params.mois,
-            total_salaires: Number(result.rows[0].total_salaires || 0)
-        });
-    } catch (err) {
-        console.error('Erreur total salaires du mois:', err);
+        console.error('Erreur enregistrement salaire mois:', err);
         res.status(500).json({ erreur: 'Erreur serveur.' });
     }
 });

@@ -68,6 +68,7 @@ async function getRapportGaz(rapportId) {
 
 async function getRapportDepensesTotal(rapportId) {
     if (!rapportId) return 0;
+
     try {
         const result = await db.query(
             `
@@ -77,6 +78,7 @@ async function getRapportDepensesTotal(rapportId) {
       `,
             [rapportId]
         );
+
         return n(result.rows[0]?.total_depenses);
     } catch (err) {
         console.error('Erreur total dépenses rapport:', err);
@@ -176,11 +178,44 @@ async function getFondMisADisposition(siteId) {
     }
 }
 
+async function getCommissionGazCumulee(siteId, b12Commission, b6Commission) {
+    try {
+        const result = await db.query(
+            `
+      SELECT rg.*
+      FROM rapport_gaz rg
+      INNER JOIN rapports r ON r.id = rg.rapport_id
+      WHERE r.site_id = $1
+      `,
+            [siteId]
+        );
+
+        let total = 0;
+
+        for (const row of result.rows) {
+            const b12Vendues = n(pick(row, ['b12_vendues', 'b12v']));
+            const b6Vendues = n(pick(row, ['b6_vendues', 'b6v']));
+            total += (b12Vendues * b12Commission) + (b6Vendues * b6Commission);
+        }
+
+        return total;
+    } catch (err) {
+        console.error('Erreur commission gaz cumulée:', err);
+        return 0;
+    }
+}
+
 router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
 
     try {
-        const [latestRapport, fallbackFond, gazConfig, comptesClients, fondMisADisposition] = await Promise.all([
+        const [
+            latestRapport,
+            fallbackFond,
+            gazConfig,
+            comptesClients,
+            fondMisADisposition
+        ] = await Promise.all([
             getLatestRapport(siteId),
             getFallbackFondMM(siteId),
             getGazConfig(siteId),
@@ -199,6 +234,17 @@ router.get('/', requireAuth, async (req, res) => {
                 getRapportDepensesTotal(latestRapport.id)
             ]);
         }
+
+        const b12PrixVente = n(pick(gazConfig, ['b12_prix_vente']));
+        const b6PrixVente = n(pick(gazConfig, ['b6_prix_vente']));
+        const b12Commission = n(pick(gazConfig, ['b12_commission']));
+        const b6Commission = n(pick(gazConfig, ['b6_commission']));
+
+        const commissionGazCumulee = await getCommissionGazCumulee(
+            siteId,
+            b12Commission,
+            b6Commission
+        );
 
         let fondsMM = {
             orange_rev: 0,
@@ -291,17 +337,30 @@ router.get('/', requireAuth, async (req, res) => {
             caisse_theorique_gaz: (b12Vide * b12Recharge) + (b6Vide * b6Recharge)
         };
 
+        const b12VenduesDernierRapport = n(pick(rapportGaz, ['b12_vendues', 'b12v']));
+        const b6VenduesDernierRapport = n(pick(rapportGaz, ['b6_vendues', 'b6v']));
+
+        const ventesGazDernierRapport =
+            (b12VenduesDernierRapport * b12PrixVente) +
+            (b6VenduesDernierRapport * b6PrixVente);
+
+        const commissionGazDernierRapport =
+            (b12VenduesDernierRapport * b12Commission) +
+            (b6VenduesDernierRapport * b6Commission);
+
         const activite = {
             rapport_saisi: !!latestRapport,
             date_rapport_reference: isoDate(latestRapport?.date_rapport),
-            b12_vendues: n(pick(rapportGaz, ['b12_vendues', 'b12v'])),
+            b12_vendues: b12VenduesDernierRapport,
             b12_rechargees: n(pick(rapportGaz, ['b12_rechargees', 'b12r'])),
             b12_fuites: n(pick(rapportGaz, ['b12_fuites', 'b12f'])),
-            b6_vendues: n(pick(rapportGaz, ['b6_vendues', 'b6v'])),
+            b6_vendues: b6VenduesDernierRapport,
             b6_rechargees: n(pick(rapportGaz, ['b6_rechargees', 'b6r'])),
             b6_fuites: n(pick(rapportGaz, ['b6_fuites', 'b6f'])),
-            ventes_gaz_jour: n(pick(rapportGaz, ['ventes_gaz_jour'])),
-            commission_gaz_jour: n(pick(rapportGaz, ['commission_gaz_jour'])),
+            ventes_gaz_jour: ventesGazDernierRapport,
+            commission_gaz_jour: commissionGazCumulee,
+            commission_gaz_dernier_rapport: commissionGazDernierRapport,
+            commission_gaz_cumulee: commissionGazCumulee,
             caisse_gaz_disponible: n(pick(rapportGaz, ['caisse_gaz_disponible'])),
             ecart_caisse_gaz: n(pick(rapportGaz, ['caisse_gaz_disponible'])) - gaz.caisse_theorique_gaz,
             total_depenses_jour: totalDepensesJour

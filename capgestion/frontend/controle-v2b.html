@@ -394,6 +394,34 @@
             color: var(--cap-text-soft);
         }
 
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid #DFE8D4;
+            background: #F7FAFC;
+            color: #2F3A44;
+        }
+
+        .mode-badge.edit {
+            background: #F3F7EC;
+            color: #29401A;
+            border-color: #D6E7B8;
+        }
+
+        .mode-badge.locked {
+            background: #FDEDEC;
+            color: #7B241C;
+            border-color: #F3C8C3;
+        }
+
+        .is-hidden {
+            display: none !important;
+        }
+
         @media (max-width: 720px) {
             .tabs-wrap {
                 top: 76px;
@@ -533,8 +561,13 @@
                 <div class="card">
                     <div class="panel-title-row">
                         <div class="card-title" style="margin-bottom:0;">Rapport du jour</div>
-                        <div class="muted">Version compacte smartphone</div>
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <span id="rapport-mode-badge" class="mode-badge">Nouveau rapport</span>
+                            <span class="muted">Version compacte smartphone</span>
+                        </div>
                     </div>
+
+                    <input type="hidden" id="rapport-id" />
 
                     <div class="rapport-compact-top">
                         <div class="rapport-inline-2">
@@ -570,68 +603,80 @@
                         </div>
                     </div>
 
-                    <div class="rapport-block">
-                        <div class="rapport-block-title">Mobile Money / caisse</div>
-                        <div class="rapport-grid-compact">
-                            <div class="form-group"><label class="form-label">Orange Revendeur</label><input
-                                    id="r-orange-rev" class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Orange PDV</label><input id="r-orange-pdv"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Wave</label><input id="r-wave"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Moov</label><input id="r-moov"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">Unités</label><input id="r-unites"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                        </div>
-                    </div>
-
-                    <div class="rapport-block">
-                        <div class="rapport-block-title">Gaz</div>
-                        <div class="rapport-grid-compact">
-                            <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">B12 rechargées</label><input id="r-b12r"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
-                            <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f"
-                                    class="form-input rapport-watch" placeholder="0" /></div>
+                    <div id="rapport-editable-area">
+                        <div class="rapport-block">
+                            <div class="rapport-block-title">Mobile Money / caisse</div>
+                            <div class="rapport-grid-compact">
+                                <div class="form-group"><label class="form-label">Orange Revendeur</label><input
+                                        id="r-orange-rev" class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Orange PDV</label><input
+                                        id="r-orange-pdv" class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Wave</label><input id="r-wave"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">MTN</label><input id="r-mtn"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Moov</label><input id="r-moov"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Moov P2</label><input id="r-moov-p2"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Trésor</label><input id="r-tresor"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Espèces</label><input id="r-especes"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Unités</label><input id="r-unites"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                            </div>
                         </div>
 
-                        <div style="margin-top:10px;">
+                        <div class="rapport-block">
+                            <div class="rapport-block-title">Gaz</div>
+                            <div class="rapport-grid-compact">
+                                <div class="form-group"><label class="form-label">B12 vendues</label><input id="r-b12v"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B12 rechargées</label><input
+                                        id="r-b12r" class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B12 fuites</label><input id="r-b12f"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B6 vendues</label><input id="r-b6v"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B6 rechargées</label><input id="r-b6r"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">B6 fuites</label><input id="r-b6f"
+                                        class="form-input rapport-watch" placeholder="0" /></div>
+                            </div>
+
+                            <div style="margin-top:10px;">
+                                <div class="form-group">
+                                    <label class="form-label">Caisse gaz disponible</label>
+                                    <input id="r-caisse-gaz-disponible" class="form-input rapport-watch"
+                                        placeholder="Montant réel en caisse gaz" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="rapport-block">
+                            <div class="rapport-block-title">Dépenses du jour</div>
+                            <div class="dep-line-compact">
+                                <input id="dep-description" class="form-input" placeholder="Description dépense" />
+                                <input id="dep-montant" class="form-input" placeholder="Montant" />
+                                <button class="btn" onclick="ajouterDepense()">Ajouter</button>
+                            </div>
+                            <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
+                        </div>
+
+                        <div id="rapport-motif-wrap" class="rapport-block is-hidden">
+                            <div class="rapport-block-title">Motif de modification</div>
                             <div class="form-group">
-                                <label class="form-label">Caisse gaz disponible</label>
-                                <input id="r-caisse-gaz-disponible" class="form-input rapport-watch"
-                                    placeholder="Montant réel en caisse gaz" />
+                                <label class="form-label">Motif</label>
+                                <input id="r-motif" class="form-input"
+                                    placeholder="Ex: correction de soldes, oubli dépense..." />
                             </div>
                         </div>
                     </div>
 
-                    <div class="rapport-block">
-                        <div class="rapport-block-title">Dépenses du jour</div>
-                        <div class="dep-line-compact">
-                            <input id="dep-description" class="form-input" placeholder="Description dépense" />
-                            <input id="dep-montant" class="form-input" placeholder="Montant" />
-                            <button class="btn" onclick="ajouterDepense()">Ajouter</button>
-                        </div>
-                        <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
-                    </div>
-
                     <div class="rapport-sticky-actions">
-                        <button class="btn btn-primary" onclick="enregistrerRapport()">Enregistrer le rapport</button>
+                        <button class="btn btn-primary" id="rapport-primary-btn"
+                            onclick="enregistrerRapport()">Enregistrer le rapport</button>
                         <button class="btn" onclick="reinitialiserRapport()">Réinitialiser</button>
                         <button class="btn" onclick="showMainTab('accueil')">Retour accueil</button>
                     </div>
@@ -835,30 +880,18 @@
                         <div class="admin-block">
                             <div class="admin-block-title">Commissions mobile money du mois</div>
                             <div class="grid-3">
-                                <div class="form-group">
-                                    <label class="form-label">Commission Orange</label>
-                                    <input id="mmc-orange" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Commission Wave</label>
-                                    <input id="mmc-wave" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Commission MTN</label>
-                                    <input id="mmc-mtn" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Commission Moov</label>
-                                    <input id="mmc-moov" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Commission Trésor</label>
-                                    <input id="mmc-tresor" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Commission Unités</label>
-                                    <input id="mmc-unites" class="form-input" placeholder="0" />
-                                </div>
+                                <div class="form-group"><label class="form-label">Commission Orange</label><input
+                                        id="mmc-orange" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission Wave</label><input
+                                        id="mmc-wave" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission MTN</label><input
+                                        id="mmc-mtn" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission Moov</label><input
+                                        id="mmc-moov" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission Trésor</label><input
+                                        id="mmc-tresor" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Commission Unités</label><input
+                                        id="mmc-unites" class="form-input" placeholder="0" /></div>
                             </div>
 
                             <div class="admin-block-actions">
@@ -870,42 +903,24 @@
                         <div class="admin-block">
                             <div class="admin-block-title">Charges mensuelles</div>
                             <div class="grid-3">
-                                <div class="form-group">
-                                    <label class="form-label">Loyer magasin principal</label>
-                                    <input id="ch-loyer-principal" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Loyer magasin gaz</label>
-                                    <input id="ch-loyer-gaz" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Eau / Électricité</label>
-                                    <input id="ch-eau-elec" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Téléphone / Internet</label>
-                                    <input id="ch-tel-internet" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Carburant</label>
-                                    <input id="ch-carburant" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Taxe mairie</label>
-                                    <input id="ch-taxe-mairie" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Photocopie</label>
-                                    <input id="ch-photocopie" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Tontine</label>
-                                    <input id="ch-tontine" class="form-input" placeholder="0" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Autre variable</label>
-                                    <input id="ch-autre-variable" class="form-input" placeholder="0" />
-                                </div>
+                                <div class="form-group"><label class="form-label">Loyer magasin principal</label><input
+                                        id="ch-loyer-principal" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Loyer magasin gaz</label><input
+                                        id="ch-loyer-gaz" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Eau / Électricité</label><input
+                                        id="ch-eau-elec" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Téléphone / Internet</label><input
+                                        id="ch-tel-internet" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Carburant</label><input
+                                        id="ch-carburant" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Taxe mairie</label><input
+                                        id="ch-taxe-mairie" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Photocopie</label><input
+                                        id="ch-photocopie" class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Tontine</label><input id="ch-tontine"
+                                        class="form-input" placeholder="0" /></div>
+                                <div class="form-group"><label class="form-label">Autre variable</label><input
+                                        id="ch-autre-variable" class="form-input" placeholder="0" /></div>
                             </div>
 
                             <div class="form-group">
@@ -922,12 +937,10 @@
 
                         <div class="admin-block">
                             <div class="admin-block-title">Synthèse annuelle</div>
-
                             <div class="admin-block-actions" style="margin-top:0; margin-bottom:8px;">
                                 <button class="btn btn-primary" onclick="chargerSyntheseAnnuelle()">Charger synthèse
                                     annuelle</button>
                             </div>
-
                             <div id="finance-synthese-container" class="muted">Charge une année pour voir la synthèse.
                             </div>
                         </div>
@@ -936,22 +949,14 @@
                     <div class="subtab-panel" data-admin-panel="employes">
                         <div class="admin-block">
                             <div class="admin-block-title">Employés</div>
-
                             <input type="hidden" id="emp-id" />
-
                             <div class="grid-3">
-                                <div class="form-group">
-                                    <label class="form-label">Nom</label>
-                                    <input id="emp-nom" class="form-input" placeholder="Nom employé" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Poste</label>
-                                    <input id="emp-poste" class="form-input" placeholder="Gérant / Caissier..." />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Salaire de base</label>
-                                    <input id="emp-salaire" class="form-input" placeholder="Ex: 150000" />
-                                </div>
+                                <div class="form-group"><label class="form-label">Nom</label><input id="emp-nom"
+                                        class="form-input" placeholder="Nom employé" /></div>
+                                <div class="form-group"><label class="form-label">Poste</label><input id="emp-poste"
+                                        class="form-input" placeholder="Gérant / Caissier..." /></div>
+                                <div class="form-group"><label class="form-label">Salaire de base</label><input
+                                        id="emp-salaire" class="form-input" placeholder="Ex: 150000" /></div>
                             </div>
 
                             <div class="admin-block-actions">
@@ -969,28 +974,20 @@
                     <div class="subtab-panel" data-admin-panel="utilisateurs">
                         <div class="admin-block">
                             <div class="admin-block-title">Utilisateurs</div>
-
                             <input type="hidden" id="usr-id" />
 
                             <div class="grid-2">
-                                <div class="form-group">
-                                    <label class="form-label">Nom</label>
-                                    <input id="usr-nom" class="form-input" placeholder="Nom utilisateur" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Email</label>
-                                    <input id="usr-email" class="form-input" placeholder="email@exemple.com" />
-                                </div>
+                                <div class="form-group"><label class="form-label">Nom</label><input id="usr-nom"
+                                        class="form-input" placeholder="Nom utilisateur" /></div>
+                                <div class="form-group"><label class="form-label">Email</label><input id="usr-email"
+                                        class="form-input" placeholder="email@exemple.com" /></div>
                             </div>
 
                             <div class="grid-2">
-                                <div class="form-group">
-                                    <label class="form-label">Mot de passe</label>
-                                    <input id="usr-password" type="password" class="form-input"
-                                        placeholder="Laisser vide pour ne pas changer" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Rôle</label>
+                                <div class="form-group"><label class="form-label">Mot de passe</label><input
+                                        id="usr-password" type="password" class="form-input"
+                                        placeholder="Laisser vide pour ne pas changer" /></div>
+                                <div class="form-group"><label class="form-label">Rôle</label>
                                     <select id="usr-role" class="form-input">
                                         <option value="gerant">gerant</option>
                                         <option value="proprietaire">proprietaire</option>
@@ -1026,14 +1023,10 @@
                                         <option value="retrait">retrait</option>
                                     </select>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Montant</label>
-                                    <input id="fmd-montant" class="form-input" placeholder="Ex: 200000" />
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Motif</label>
-                                    <input id="fmd-motif" class="form-input" placeholder="Motif" />
-                                </div>
+                                <div class="form-group"><label class="form-label">Montant</label><input id="fmd-montant"
+                                        class="form-input" placeholder="Ex: 200000" /></div>
+                                <div class="form-group"><label class="form-label">Motif</label><input id="fmd-motif"
+                                        class="form-input" placeholder="Motif" /></div>
                             </div>
 
                             <div class="admin-block-actions">
@@ -1124,6 +1117,11 @@
         let clientsCache = [];
         let employesCache = [];
         let utilisateursCache = [];
+        let reportEditState = {
+            mode: 'create',
+            rapportId: null,
+            modifiable: true
+        };
 
         function afficher(data) {
             if (!sortie) return;
@@ -1265,7 +1263,7 @@
             const comptes = data.comptes_clients || {};
 
             document.getElementById('dash-fonds').textContent = fcfa(fonds.fonds_disponibles);
-            document.getElementById('dash-source-fonds').textContent = `Source : ${fonds.source || '-'}`;
+            document.getElementById('dash-source-fonds').textContent = `Source : ${fonds.source || '-'}${fonds.date_source ? ' / ' + fonds.date_source : ''}`;
             document.getElementById('dash-treso').textContent = fcfa(treso.tresorerie_corrigee);
             document.getElementById('dash-perte').textContent = fcfa(treso.perte_ou_excedent);
             document.getElementById('dash-fond-mis').textContent = `Fond mis à disposition : ${fcfa(treso.fond_mis_a_disposition)}`;
@@ -1415,34 +1413,34 @@
             container.innerHTML = `
         <div class="historique-list">
           ${rows.map(row => {
-                const soldes = row.soldes || row.rapport_soldes || {};
-                const gaz = row.gaz || row.rapport_gaz || {};
                 const depenses = Array.isArray(row.depenses) ? row.depenses : [];
                 const totalSoldes =
-                    Number(soldes.orange_rev || 0) +
-                    Number(soldes.orange_pdv || 0) +
-                    Number(soldes.wave || 0) +
-                    Number(soldes.mtn || 0) +
-                    Number(soldes.moov || 0) +
-                    Number(soldes.moov_p2 || 0) +
-                    Number(soldes.tresor || 0) +
-                    Number(soldes.especes || 0) +
-                    Number(soldes.unites || 0);
+                    Number(row.orange_rev || 0) +
+                    Number(row.orange_pdv || 0) +
+                    Number(row.wave || 0) +
+                    Number(row.mtn || 0) +
+                    Number(row.moov || 0) +
+                    Number(row.moov_p2 || 0) +
+                    Number(row.tresor || 0) +
+                    Number(row.especes || 0) +
+                    Number(row.unites || 0);
+
                 const totalDepenses = depenses.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
+
                 return `
               <div class="historique-card">
                 <div class="historique-title">
-                  <span>${escapeHtml(row.date_rapport || row.date || '-')}</span>
+                  <span>${escapeHtml(row.date_rapport || '-')}</span>
                   <span>${escapeHtml(getRapportStatus(row))}</span>
                 </div>
                 <div class="historique-grid">
                   <div>Observation : ${escapeHtml(row.observation || '-')}</div>
                   <div>Total soldes : ${fcfa(totalSoldes)}</div>
-                  <div>B12 vendues : ${Number(gaz.b12_vendues || gaz.b12v || 0)}</div>
-                  <div>B6 vendues : ${Number(gaz.b6_vendues || gaz.b6v || 0)}</div>
+                  <div>B12 vendues : ${Number(row.b12_vendues || 0)}</div>
+                  <div>B6 vendues : ${Number(row.b6_vendues || 0)}</div>
                   <div>Dépenses : ${fcfa(totalDepenses)}</div>
                   <div>Nb dépenses : ${depenses.length}</div>
-                  <div>Gérant : ${escapeHtml(row.gerant_nom || row.nom_gerant || '-')}</div>
+                  <div>Gérant : ${escapeHtml(row.gerant_nom || '-')}</div>
                   <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
                 </div>
               </div>
@@ -1465,21 +1463,15 @@
                 rapportNumber('r-unites');
 
             const totalGazVendu =
-                rapportNumber('r-b12v') +
-                rapportNumber('r-b6v');
+                rapportNumber('r-b12v') + rapportNumber('r-b6v');
 
             const caisseGaz = rapportNumber('r-caisse-gaz-disponible');
             const totalDepenses = depensesRapport.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
 
-            const totalSoldesEl = document.getElementById('rapport-total-soldes');
-            const totalGazEl = document.getElementById('rapport-total-gaz-vendu');
-            const caisseGazEl = document.getElementById('rapport-caisse-gaz');
-            const totalDepensesEl = document.getElementById('rapport-total-depenses');
-
-            if (totalSoldesEl) totalSoldesEl.textContent = fcfa(totalSoldes);
-            if (totalGazEl) totalGazEl.textContent = `${totalGazVendu} bouteille`;
-            if (caisseGazEl) caisseGazEl.textContent = fcfa(caisseGaz);
-            if (totalDepensesEl) totalDepensesEl.textContent = fcfa(totalDepenses);
+            document.getElementById('rapport-total-soldes').textContent = fcfa(totalSoldes);
+            document.getElementById('rapport-total-gaz-vendu').textContent = `${totalGazVendu} bouteille`;
+            document.getElementById('rapport-caisse-gaz').textContent = fcfa(caisseGaz);
+            document.getElementById('rapport-total-depenses').textContent = fcfa(totalDepenses);
         }
 
         function bindRapportCompactInputs() {
@@ -1493,35 +1485,166 @@
             }
         }
 
+        function toggleRapportEditable(disabled) {
+            const area = document.getElementById('rapport-editable-area');
+            area.querySelectorAll('input, textarea, select, button').forEach(el => {
+                el.disabled = disabled;
+            });
+
+            const primaryBtn = document.getElementById('rapport-primary-btn');
+            primaryBtn.disabled = disabled;
+            if (disabled) {
+                primaryBtn.textContent = 'Rapport non modifiable';
+            }
+        }
+
+        function setRapportModeCreate() {
+            reportEditState = { mode: 'create', rapportId: null, modifiable: true };
+            document.getElementById('rapport-id').value = '';
+            document.getElementById('rapport-mode-badge').className = 'mode-badge';
+            document.getElementById('rapport-mode-badge').textContent = 'Nouveau rapport';
+            document.getElementById('rapport-primary-btn').textContent = 'Enregistrer le rapport';
+            document.getElementById('rapport-motif-wrap').classList.add('is-hidden');
+            document.getElementById('r-motif').value = '';
+            toggleRapportEditable(false);
+        }
+
+        function setRapportModeEdit(rapport) {
+            reportEditState = {
+                mode: 'edit',
+                rapportId: rapport.id,
+                modifiable: !!rapport.modifiable
+            };
+
+            document.getElementById('rapport-id').value = rapport.id;
+
+            const badge = document.getElementById('rapport-mode-badge');
+            const btn = document.getElementById('rapport-primary-btn');
+
+            if (rapport.modifiable) {
+                badge.className = 'mode-badge edit';
+                badge.textContent = 'Mode modification';
+                btn.textContent = 'Mettre à jour le rapport';
+                document.getElementById('rapport-motif-wrap').classList.remove('is-hidden');
+                toggleRapportEditable(false);
+            } else {
+                badge.className = 'mode-badge locked';
+                badge.textContent = 'Rapport verrouillé';
+                document.getElementById('rapport-motif-wrap').classList.add('is-hidden');
+                document.getElementById('r-motif').value = '';
+                toggleRapportEditable(true);
+            }
+        }
+
+        function resetRapportFieldsOnly() {
+            document.getElementById('r-observation').value = '';
+            document.getElementById('r-motif').value = '';
+            [
+                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
+                'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
+                'r-b6v', 'r-b6r', 'r-b6f', 'r-caisse-gaz-disponible'
+            ].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            depensesRapport = [];
+            refreshDepensesRapportUI();
+            updateRapportSummary();
+        }
+
+        function fillRapportForm(rapport) {
+            document.getElementById('r-observation').value = rapport.observation || '';
+            document.getElementById('r-orange-rev').value = rapport.orange_rev ?? 0;
+            document.getElementById('r-orange-pdv').value = rapport.orange_pdv ?? 0;
+            document.getElementById('r-wave').value = rapport.wave ?? 0;
+            document.getElementById('r-mtn').value = rapport.mtn ?? 0;
+            document.getElementById('r-moov').value = rapport.moov ?? 0;
+            document.getElementById('r-moov-p2').value = rapport.moov_p2 ?? 0;
+            document.getElementById('r-tresor').value = rapport.tresor ?? 0;
+            document.getElementById('r-especes').value = rapport.especes ?? 0;
+            document.getElementById('r-unites').value = rapport.unites ?? 0;
+
+            document.getElementById('r-b12v').value = rapport.b12_vendues ?? 0;
+            document.getElementById('r-b12r').value = rapport.b12_rechargees ?? 0;
+            document.getElementById('r-b12f').value = rapport.b12_fuites ?? 0;
+            document.getElementById('r-b6v').value = rapport.b6_vendues ?? 0;
+            document.getElementById('r-b6r').value = rapport.b6_rechargees ?? 0;
+            document.getElementById('r-b6f').value = rapport.b6_fuites ?? 0;
+            document.getElementById('r-caisse-gaz-disponible').value = rapport.caisse_gaz_disponible ?? 0;
+
+            depensesRapport = Array.isArray(rapport.depenses)
+                ? rapport.depenses.map(dep => ({
+                    description: dep.description || '',
+                    montant: Number(dep.montant || 0)
+                }))
+                : [];
+
+            refreshDepensesRapportUI();
+            updateRapportSummary();
+        }
+
+        function extractRapportPayload() {
+            return {
+                observation: valeurChamp('r-observation'),
+                motif: valeurChamp('r-motif'),
+                soldes: {
+                    orange_rev: valeurChamp('r-orange-rev'),
+                    orange_pdv: valeurChamp('r-orange-pdv'),
+                    wave: valeurChamp('r-wave'),
+                    mtn: valeurChamp('r-mtn'),
+                    moov: valeurChamp('r-moov'),
+                    moov_p2: valeurChamp('r-moov-p2'),
+                    tresor: valeurChamp('r-tresor'),
+                    especes: valeurChamp('r-especes'),
+                    unites: valeurChamp('r-unites')
+                },
+                gaz: {
+                    b12v: valeurChamp('r-b12v'),
+                    b12r: valeurChamp('r-b12r'),
+                    b12f: valeurChamp('r-b12f'),
+                    b6v: valeurChamp('r-b6v'),
+                    b6r: valeurChamp('r-b6r'),
+                    b6f: valeurChamp('r-b6f'),
+                    caisse_gaz_disponible: valeurChamp('r-caisse-gaz-disponible')
+                },
+                depenses: depensesRapport
+            };
+        }
+
         async function verifierRapportExistantParDate() {
             const date = normalizeDateString(valeurChamp('r-date'));
             clearFeedback('rapport-date-status');
+            clearFeedback('rapport-feedback');
 
             if (!date) return;
 
-            const mois = date.slice(0, 7);
-            const { res, data } = await fetchJson(`/api/rapports?mois=${encodeURIComponent(mois)}`);
+            const { res, data } = await fetchJson(`/api/rapports?date=${encodeURIComponent(date)}&limit=1`);
 
             if (!res.ok) {
+                setRapportModeCreate();
                 showFeedback('rapport-date-status', 'info', 'Impossible de vérifier les rapports existants pour cette date.');
                 return;
             }
 
             const rows = extractRapportsArray(data);
-            const rapport = rows.find(row => normalizeDateString(row.date_rapport || row.date) === date);
-
-            if (!rapport) {
+            if (!rows.length) {
+                setRapportModeCreate();
+                resetRapportFieldsOnly();
                 showFeedback('rapport-date-status', 'info', 'Aucun rapport existant pour cette date. Nouveau rapport possible.');
                 return;
             }
 
-            const statut = getRapportStatus(rapport);
-            const modifiable = isRapportModifiable(rapport) ? 'Oui' : 'Non';
-            const editeur = getRapportEditorName(rapport);
+            const rapport = rows[0];
+            fillRapportForm(rapport);
+            setRapportModeEdit(rapport);
+
+            const status = getRapportStatus(rapport);
+            const editor = getRapportEditorName(rapport);
+            const modifiableText = rapport.modifiable ? 'Oui' : 'Non';
+
             showFeedback(
                 'rapport-date-status',
-                'info',
-                `Rapport existant détecté pour le ${date}. État : ${statut}. Modifiable : ${modifiable}. Dernier éditeur : ${editeur}.`
+                rapport.modifiable ? 'info' : 'error',
+                `Rapport existant détecté pour le ${date}. État : ${status}. Modifiable : ${modifiableText}. Dernier éditeur : ${editor}.${rapport.raison_non_modifiable ? ' Motif : ' + rapport.raison_non_modifiable : ''}`
             );
         }
 
@@ -1549,12 +1672,12 @@
             const montant = Number(valeurChamp('dep-montant'));
 
             if (!description) {
-                afficher({ erreur: 'Description de dépense requise.' });
+                showFeedback('rapport-feedback', 'error', 'Description de dépense requise.');
                 return;
             }
 
             if (!Number.isFinite(montant) || montant <= 0) {
-                afficher({ erreur: 'Montant de dépense invalide.' });
+                showFeedback('rapport-feedback', 'error', 'Montant de dépense invalide.');
                 return;
             }
 
@@ -1562,27 +1685,17 @@
             document.getElementById('dep-description').value = '';
             document.getElementById('dep-montant').value = '';
             refreshDepensesRapportUI();
-            afficher({ ok: true, depenses: depensesRapport });
         }
 
         function supprimerDepense(index) {
             depensesRapport.splice(index, 1);
             refreshDepensesRapportUI();
-            afficher({ ok: true, depenses: depensesRapport });
         }
 
         function reinitialiserRapport() {
             document.getElementById('r-date').value = todayISO();
-            document.getElementById('r-observation').value = '';
-            [
-                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
-                'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
-                'r-b6v', 'r-b6r', 'r-b6f', 'r-caisse-gaz-disponible'
-            ].forEach(id => document.getElementById(id).value = '');
-
-            depensesRapport = [];
-            refreshDepensesRapportUI();
-            updateRapportSummary();
+            resetRapportFieldsOnly();
+            setRapportModeCreate();
             clearFeedback('rapport-feedback');
             verifierRapportExistantParDate();
         }
@@ -1925,26 +2038,26 @@
             const fond = data.fond_mm || {};
             const gaz = data.gaz || {};
 
-            if (document.getElementById('mm-orange-rev')) document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
-            if (document.getElementById('mm-orange-pdv')) document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
-            if (document.getElementById('mm-wave')) document.getElementById('mm-wave').value = fond.wave ?? 0;
-            if (document.getElementById('mm-mtn')) document.getElementById('mm-mtn').value = fond.mtn ?? 0;
-            if (document.getElementById('mm-moov')) document.getElementById('mm-moov').value = fond.moov ?? 0;
-            if (document.getElementById('mm-moov-p2')) document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
-            if (document.getElementById('mm-tresor')) document.getElementById('mm-tresor').value = fond.tresor ?? 0;
-            if (document.getElementById('mm-unites')) document.getElementById('mm-unites').value = fond.unites ?? 0;
-            if (document.getElementById('mm-especes')) document.getElementById('mm-especes').value = fond.especes ?? 0;
+            document.getElementById('mm-orange-rev').value = fond.orange_rev ?? 0;
+            document.getElementById('mm-orange-pdv').value = fond.orange_pdv ?? 0;
+            document.getElementById('mm-wave').value = fond.wave ?? 0;
+            document.getElementById('mm-mtn').value = fond.mtn ?? 0;
+            document.getElementById('mm-moov').value = fond.moov ?? 0;
+            document.getElementById('mm-moov-p2').value = fond.moov_p2 ?? 0;
+            document.getElementById('mm-tresor').value = fond.tresor ?? 0;
+            document.getElementById('mm-unites').value = fond.unites ?? 0;
+            document.getElementById('mm-especes').value = fond.especes ?? 0;
 
-            if (document.getElementById('gaz-b12-pleines')) document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
-            if (document.getElementById('gaz-b12-vides')) document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
-            if (document.getElementById('gaz-b6-pleines')) document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
-            if (document.getElementById('gaz-b6-vides')) document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
-            if (document.getElementById('gaz-b12-commission')) document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
-            if (document.getElementById('gaz-b6-commission')) document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
-            if (document.getElementById('gaz-b12-prix')) document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
-            if (document.getElementById('gaz-b6-prix')) document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
-            if (document.getElementById('gaz-b12-recharge')) document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
-            if (document.getElementById('gaz-b6-recharge')) document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
+            document.getElementById('gaz-b12-pleines').value = gaz.b12_pleines ?? 0;
+            document.getElementById('gaz-b12-vides').value = gaz.b12_vides ?? 0;
+            document.getElementById('gaz-b6-pleines').value = gaz.b6_pleines ?? 0;
+            document.getElementById('gaz-b6-vides').value = gaz.b6_vides ?? 0;
+            document.getElementById('gaz-b12-commission').value = gaz.b12_commission ?? 450;
+            document.getElementById('gaz-b6-commission').value = gaz.b6_commission ?? 350;
+            document.getElementById('gaz-b12-prix').value = gaz.b12_prix_vente ?? 4950;
+            document.getElementById('gaz-b6-prix').value = gaz.b6_prix_vente ?? 1850;
+            document.getElementById('gaz-b12-recharge').value = gaz.b12_cout_recharge ?? 4950;
+            document.getElementById('gaz-b6-recharge').value = gaz.b6_cout_recharge ?? 1850;
         }
 
         async function chargerEtatFond() {
@@ -1994,44 +2107,70 @@
         async function enregistrerRapport() {
             clearFeedback('rapport-feedback');
 
-            const payload = {
-                date_rapport: valeurChamp('r-date'),
-                observation: valeurChamp('r-observation'),
-                soldes: {
-                    orange_rev: valeurChamp('r-orange-rev'),
-                    orange_pdv: valeurChamp('r-orange-pdv'),
-                    wave: valeurChamp('r-wave'),
-                    mtn: valeurChamp('r-mtn'),
-                    moov: valeurChamp('r-moov'),
-                    moov_p2: valeurChamp('r-moov-p2'),
-                    tresor: valeurChamp('r-tresor'),
-                    especes: valeurChamp('r-especes'),
-                    unites: valeurChamp('r-unites')
-                },
-                gaz: {
-                    b12v: valeurChamp('r-b12v'),
-                    b12r: valeurChamp('r-b12r'),
-                    b12f: valeurChamp('r-b12f'),
-                    b6v: valeurChamp('r-b6v'),
-                    b6r: valeurChamp('r-b6r'),
-                    b6f: valeurChamp('r-b6f'),
-                    caisse_gaz_disponible: valeurChamp('r-caisse-gaz-disponible')
-                },
-                depenses: depensesRapport
-            };
+            const dateRapport = valeurChamp('r-date');
+            if (!dateRapport) {
+                showFeedback('rapport-feedback', 'error', 'Veuillez renseigner une date de rapport.');
+                return;
+            }
 
-            const { res, data } = await api('/api/rapports', {
+            if (reportEditState.mode === 'edit' && !reportEditState.modifiable) {
+                showFeedback('rapport-feedback', 'error', 'Ce rapport n’est plus modifiable.');
+                return;
+            }
+
+            const payload = extractRapportPayload();
+            let response;
+
+            if (reportEditState.mode === 'edit' && reportEditState.rapportId) {
+                response = await api(`/api/rapports/${reportEditState.rapportId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.res.ok) {
+                    const rapport = response.data?.rapport;
+                    if (rapport) {
+                        fillRapportForm(rapport);
+                        setRapportModeEdit(rapport);
+                    }
+                    showFeedback('rapport-feedback', 'success', 'Rapport mis à jour avec succès.');
+                    await testerDashboard();
+                    await verifierRapportExistantParDate();
+                    return;
+                }
+
+                showFeedback('rapport-feedback', 'error', response.data?.erreur || 'Impossible de mettre à jour le rapport.');
+                return;
+            }
+
+            response = await api('/api/rapports', {
                 method: 'POST',
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    date_rapport: dateRapport,
+                    ...payload
+                })
             });
 
-            if (res.ok) {
+            if (response.res.ok) {
+                const rapport = response.data?.rapport;
+                if (rapport) {
+                    fillRapportForm(rapport);
+                    setRapportModeEdit(rapport);
+                } else {
+                    await verifierRapportExistantParDate();
+                }
                 showFeedback('rapport-feedback', 'success', 'Rapport enregistré avec succès.');
                 await testerDashboard();
-                await verifierRapportExistantParDate();
-            } else {
-                showFeedback('rapport-feedback', 'error', data?.erreur || 'Impossible d’enregistrer le rapport.');
+                return;
             }
+
+            if (response.res.status === 409) {
+                await verifierRapportExistantParDate();
+                showFeedback('rapport-feedback', 'error', response.data?.erreur || 'Un rapport existe déjà pour cette date.');
+                return;
+            }
+
+            showFeedback('rapport-feedback', 'error', response.data?.erreur || 'Impossible d’enregistrer le rapport.');
         }
 
         async function chargerFinanceMois() {
@@ -2173,38 +2312,6 @@
             }
         }
 
-        async function creerOuModifierCompteClient() {
-            clearFeedback('clients-feedback');
-
-            const id = document.getElementById('cc-id').value.trim();
-            const payload = {
-                nom: document.getElementById('cc-nom').value,
-                telephone: document.getElementById('cc-tel').value,
-                observation: document.getElementById('cc-obs').value
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/comptes-clients/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/comptes-clients', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetCompteClientForm();
-                await testerComptesClients();
-                showFeedback('clients-feedback', 'success', id ? 'Client modifié avec succès.' : 'Client créé avec succès.');
-            } else {
-                showFeedback('clients-feedback', 'error', result.data?.erreur || 'Impossible d’enregistrer le client.');
-            }
-        }
-
         async function ajouterMouvementCompte() {
             clearFeedback('clients-feedback');
 
@@ -2237,74 +2344,12 @@
 
         async function testerEmployes() {
             const { res, data } = await api('/api/employes');
-            if (res.ok) {
-                renderEmployesList(data);
-            }
-        }
-
-        async function creerOuModifierEmploye() {
-            const id = document.getElementById('emp-id').value.trim();
-            const payload = {
-                nom: document.getElementById('emp-nom').value,
-                poste: document.getElementById('emp-poste').value,
-                salaire_base: document.getElementById('emp-salaire').value
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/employes/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/employes', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetEmployeForm();
-                await testerEmployes();
-            }
+            if (res.ok) renderEmployesList(data);
         }
 
         async function testerUtilisateurs() {
             const { res, data } = await api('/api/utilisateurs');
-            if (res.ok) {
-                renderUtilisateursList(data);
-            }
-        }
-
-        async function creerOuModifierUtilisateur() {
-            const id = document.getElementById('usr-id').value.trim();
-            const employeId = document.getElementById('usr-employe-id').value.trim();
-
-            const payload = {
-                nom: document.getElementById('usr-nom').value,
-                email: document.getElementById('usr-email').value,
-                mot_de_passe: document.getElementById('usr-password').value,
-                role: document.getElementById('usr-role').value,
-                employe_id: employeId ? Number(employeId) : null
-            };
-
-            let result;
-            if (id) {
-                result = await api(`/api/utilisateurs/${id}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload)
-                });
-            } else {
-                result = await api('/api/utilisateurs', {
-                    method: 'POST',
-                    body: JSON.stringify(payload)
-                });
-            }
-
-            if (result.res.ok) {
-                resetUtilisateurForm();
-                await testerUtilisateurs();
-            }
+            if (res.ok) renderUtilisateursList(data);
         }
 
         async function ajouterFondMisADisposition() {
@@ -2375,16 +2420,17 @@
             document.getElementById('finance-annee').value = currentYear();
             document.getElementById('hist-mois').value = currentMonth();
 
-            refreshDepensesRapportUI();
             bindRapportCompactInputs();
             updateRapportSummary();
             resetCompteClientForm();
             resetEmployeForm();
             resetUtilisateurForm();
+            setRapportModeCreate();
             clearFeedback('rapport-feedback');
             clearFeedback('rapport-date-status');
             clearFeedback('clients-feedback');
             clearFeedback('historique-feedback');
+            refreshDepensesRapportUI();
 
             await chargerListeClientsDansSelect();
             await testerSession();

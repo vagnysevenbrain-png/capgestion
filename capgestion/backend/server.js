@@ -45,6 +45,9 @@ app.use(attachUser);
 
 // Fichiers statiques frontend
 app.use(express.static(path.join(__dirname, '../frontend')));
+app.get('/', (req, res) => {
+  res.redirect('/entree-v2.html');
+});
 
 // Routes API
 app.use('/api/auth', authRoutes);

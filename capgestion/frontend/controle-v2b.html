@@ -144,7 +144,7 @@
 
         .feedback-box {
             display: none;
-            margin-bottom: 12px;
+            margin-top: 12px;
             border-radius: 14px;
             padding: 12px 14px;
             border: 1px solid #DFE8D4;
@@ -536,8 +536,6 @@
                         <div class="muted">Version compacte smartphone</div>
                     </div>
 
-                    <div id="rapport-feedback" class="feedback-box"></div>
-
                     <div class="rapport-compact-top">
                         <div class="rapport-inline-2">
                             <div class="form-group">
@@ -549,6 +547,8 @@
                                 <input id="r-observation" class="form-input" placeholder="Observation générale" />
                             </div>
                         </div>
+
+                        <div id="rapport-date-status" class="feedback-box"></div>
 
                         <div class="rapport-mini-grid">
                             <div class="rapport-mini-card">
@@ -635,6 +635,8 @@
                         <button class="btn" onclick="reinitialiserRapport()">Réinitialiser</button>
                         <button class="btn" onclick="showMainTab('accueil')">Retour accueil</button>
                     </div>
+
+                    <div id="rapport-feedback" class="feedback-box"></div>
                 </div>
             </div>
         </section>
@@ -646,6 +648,8 @@
                         <div class="card-title" style="margin-bottom:0;">Clients / crédits</div>
                         <div class="muted">Gestion terrain des comptes clients</div>
                     </div>
+
+                    <div id="clients-feedback" class="feedback-box"></div>
 
                     <div class="section-label">Créer / modifier un compte client</div>
                     <input type="hidden" id="cc-id" />
@@ -1181,6 +1185,45 @@
             if (state) el.classList.add(state);
         }
 
+        function normalizeDateString(value) {
+            if (!value) return '';
+            return String(value).slice(0, 10);
+        }
+
+        function extractRapportsArray(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data?.rapports)) return data.rapports;
+            if (Array.isArray(data?.items)) return data.items;
+            return [];
+        }
+
+        function getRapportStatus(row) {
+            return row?.statut || row?.status || row?.etat || 'enregistré';
+        }
+
+        function getRapportEditorName(row) {
+            return (
+                row?.last_modified_by_nom ||
+                row?.editeur_nom ||
+                row?.modifie_par_nom ||
+                row?.last_editor_name ||
+                row?.last_modified_by_name ||
+                row?.gerant_nom ||
+                row?.nom_gerant ||
+                row?.created_by_nom ||
+                '-'
+            );
+        }
+
+        function isRapportModifiable(row) {
+            if (typeof row?.modifiable === 'boolean') return row.modifiable;
+            const status = String(getRapportStatus(row)).toLowerCase();
+            if (['valide', 'cloture', 'clôturé', 'verrouille', 'verrouillé', 'finalise', 'finalisé'].includes(status)) {
+                return false;
+            }
+            return true;
+        }
+
         function showMainTab(tab) {
             document.querySelectorAll('[data-tab-btn]').forEach(btn => {
                 btn.classList.toggle('active', btn.dataset.tabBtn === tab);
@@ -1362,7 +1405,7 @@
 
         function renderHistoriqueRapports(data) {
             const container = document.getElementById('historique-resultats');
-            const rows = Array.isArray(data) ? data : (Array.isArray(data?.rapports) ? data.rapports : []);
+            const rows = extractRapportsArray(data);
 
             if (!rows.length) {
                 container.innerHTML = '<span class="muted">Aucun rapport trouvé pour cette période.</span>';
@@ -1390,15 +1433,17 @@
               <div class="historique-card">
                 <div class="historique-title">
                   <span>${escapeHtml(row.date_rapport || row.date || '-')}</span>
-                  <span>${escapeHtml(row.statut || 'envoye')}</span>
+                  <span>${escapeHtml(getRapportStatus(row))}</span>
                 </div>
                 <div class="historique-grid">
                   <div>Observation : ${escapeHtml(row.observation || '-')}</div>
                   <div>Total soldes : ${fcfa(totalSoldes)}</div>
-                  <div>B12 vendues : ${Number(gaz.b12_vendues || 0)}</div>
-                  <div>B6 vendues : ${Number(gaz.b6_vendues || 0)}</div>
+                  <div>B12 vendues : ${Number(gaz.b12_vendues || gaz.b12v || 0)}</div>
+                  <div>B6 vendues : ${Number(gaz.b6_vendues || gaz.b6v || 0)}</div>
                   <div>Dépenses : ${fcfa(totalDepenses)}</div>
                   <div>Nb dépenses : ${depenses.length}</div>
+                  <div>Gérant : ${escapeHtml(row.gerant_nom || row.nom_gerant || '-')}</div>
+                  <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
                 </div>
               </div>
             `;
@@ -1441,6 +1486,105 @@
             document.querySelectorAll('.rapport-watch').forEach(input => {
                 input.addEventListener('input', updateRapportSummary);
             });
+
+            const dateInput = document.getElementById('r-date');
+            if (dateInput) {
+                dateInput.addEventListener('change', verifierRapportExistantParDate);
+            }
+        }
+
+        async function verifierRapportExistantParDate() {
+            const date = normalizeDateString(valeurChamp('r-date'));
+            clearFeedback('rapport-date-status');
+
+            if (!date) return;
+
+            const mois = date.slice(0, 7);
+            const { res, data } = await fetchJson(`/api/rapports?mois=${encodeURIComponent(mois)}`);
+
+            if (!res.ok) {
+                showFeedback('rapport-date-status', 'info', 'Impossible de vérifier les rapports existants pour cette date.');
+                return;
+            }
+
+            const rows = extractRapportsArray(data);
+            const rapport = rows.find(row => normalizeDateString(row.date_rapport || row.date) === date);
+
+            if (!rapport) {
+                showFeedback('rapport-date-status', 'info', 'Aucun rapport existant pour cette date. Nouveau rapport possible.');
+                return;
+            }
+
+            const statut = getRapportStatus(rapport);
+            const modifiable = isRapportModifiable(rapport) ? 'Oui' : 'Non';
+            const editeur = getRapportEditorName(rapport);
+            showFeedback(
+                'rapport-date-status',
+                'info',
+                `Rapport existant détecté pour le ${date}. État : ${statut}. Modifiable : ${modifiable}. Dernier éditeur : ${editeur}.`
+            );
+        }
+
+        function refreshDepensesRapportUI() {
+            const bloc = document.getElementById('depenses-liste');
+
+            if (!depensesRapport.length) {
+                bloc.innerHTML = '<span class="muted">Aucune dépense ajoutée.</span>';
+                updateRapportSummary();
+                return;
+            }
+
+            bloc.innerHTML = depensesRapport.map((dep, index) => `
+        <div class="dep-item">
+          <span><strong>${escapeHtml(dep.description)}</strong> - ${fcfa(dep.montant)}</span>
+          <button class="btn btn-sm btn-danger" onclick="supprimerDepense(${index})">Supprimer</button>
+        </div>
+      `).join('');
+
+            updateRapportSummary();
+        }
+
+        function ajouterDepense() {
+            const description = valeurChamp('dep-description').trim();
+            const montant = Number(valeurChamp('dep-montant'));
+
+            if (!description) {
+                afficher({ erreur: 'Description de dépense requise.' });
+                return;
+            }
+
+            if (!Number.isFinite(montant) || montant <= 0) {
+                afficher({ erreur: 'Montant de dépense invalide.' });
+                return;
+            }
+
+            depensesRapport.push({ description, montant: Math.round(montant) });
+            document.getElementById('dep-description').value = '';
+            document.getElementById('dep-montant').value = '';
+            refreshDepensesRapportUI();
+            afficher({ ok: true, depenses: depensesRapport });
+        }
+
+        function supprimerDepense(index) {
+            depensesRapport.splice(index, 1);
+            refreshDepensesRapportUI();
+            afficher({ ok: true, depenses: depensesRapport });
+        }
+
+        function reinitialiserRapport() {
+            document.getElementById('r-date').value = todayISO();
+            document.getElementById('r-observation').value = '';
+            [
+                'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
+                'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
+                'r-b6v', 'r-b6r', 'r-b6f', 'r-caisse-gaz-disponible'
+            ].forEach(id => document.getElementById(id).value = '');
+
+            depensesRapport = [];
+            refreshDepensesRapportUI();
+            updateRapportSummary();
+            clearFeedback('rapport-feedback');
+            verifierRapportExistantParDate();
         }
 
         function resetCompteClientForm() {
@@ -1498,14 +1642,50 @@
       `;
         }
 
+        async function creerOuModifierCompteClient() {
+            clearFeedback('clients-feedback');
+
+            const id = document.getElementById('cc-id').value.trim();
+            const payload = {
+                nom: document.getElementById('cc-nom').value,
+                telephone: document.getElementById('cc-tel').value,
+                observation: document.getElementById('cc-obs').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/comptes-clients/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/comptes-clients', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetCompteClientForm();
+                await testerComptesClients();
+                showFeedback('clients-feedback', 'success', id ? 'Client modifié avec succès.' : 'Client créé avec succès.');
+            } else {
+                showFeedback('clients-feedback', 'error', result.data?.erreur || 'Impossible d’enregistrer le client.');
+            }
+        }
+
         async function changerStatutClient(id, actif) {
-            const { res } = await api(`/api/comptes-clients/${id}/statut`, {
+            clearFeedback('clients-feedback');
+            const { res, data } = await api(`/api/comptes-clients/${id}/statut`, {
                 method: 'PUT',
                 body: JSON.stringify({ actif })
             });
 
             if (res.ok) {
                 await testerComptesClients();
+                showFeedback('clients-feedback', 'success', 'Statut du client mis à jour.');
+            } else {
+                showFeedback('clients-feedback', 'error', data?.erreur || 'Impossible de changer le statut du client.');
             }
         }
 
@@ -1562,6 +1742,33 @@
           `).join('')}
         </div>
       `;
+        }
+
+        async function creerOuModifierEmploye() {
+            const id = document.getElementById('emp-id').value.trim();
+            const payload = {
+                nom: document.getElementById('emp-nom').value,
+                poste: document.getElementById('emp-poste').value,
+                salaire_base: document.getElementById('emp-salaire').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/employes/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/employes', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetEmployeForm();
+                await testerEmployes();
+            }
         }
 
         async function changerStatutEmploye(id, actif) {
@@ -1633,6 +1840,37 @@
           `).join('')}
         </div>
       `;
+        }
+
+        async function creerOuModifierUtilisateur() {
+            const id = document.getElementById('usr-id').value.trim();
+            const employeId = document.getElementById('usr-employe-id').value.trim();
+
+            const payload = {
+                nom: document.getElementById('usr-nom').value,
+                email: document.getElementById('usr-email').value,
+                mot_de_passe: document.getElementById('usr-password').value,
+                role: document.getElementById('usr-role').value,
+                employe_id: employeId ? Number(employeId) : null
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/utilisateurs/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/utilisateurs', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetUtilisateurForm();
+                await testerUtilisateurs();
+            }
         }
 
         async function changerStatutUtilisateur(id, actif) {
@@ -1737,10 +1975,11 @@
             const mois = valeurChamp('hist-mois').trim();
             const url = mois ? `/api/rapports?mois=${encodeURIComponent(mois)}` : '/api/rapports';
             const { res, data } = await api(url);
+
             if (res.ok) {
+                const rows = extractRapportsArray(data);
                 renderHistoriqueRapports(data);
-                const nb = Array.isArray(data) ? data.length : (Array.isArray(data?.rapports) ? data.rapports.length : 0);
-                showFeedback('historique-feedback', 'success', `${nb} rapport(s) chargé(s).`);
+                showFeedback('historique-feedback', 'success', `${rows.length} rapport(s) chargé(s).`);
             } else {
                 renderHistoriqueRapports([]);
                 showFeedback('historique-feedback', 'error', data?.erreur || 'Impossible de charger les rapports.');
@@ -1754,6 +1993,7 @@
 
         async function enregistrerRapport() {
             clearFeedback('rapport-feedback');
+
             const payload = {
                 date_rapport: valeurChamp('r-date'),
                 observation: valeurChamp('r-observation'),
@@ -1788,6 +2028,7 @@
             if (res.ok) {
                 showFeedback('rapport-feedback', 'success', 'Rapport enregistré avec succès.');
                 await testerDashboard();
+                await verifierRapportExistantParDate();
             } else {
                 showFeedback('rapport-feedback', 'error', data?.erreur || 'Impossible d’enregistrer le rapport.');
             }
@@ -1933,6 +2174,8 @@
         }
 
         async function creerOuModifierCompteClient() {
+            clearFeedback('clients-feedback');
+
             const id = document.getElementById('cc-id').value.trim();
             const payload = {
                 nom: document.getElementById('cc-nom').value,
@@ -1956,17 +2199,22 @@
             if (result.res.ok) {
                 resetCompteClientForm();
                 await testerComptesClients();
+                showFeedback('clients-feedback', 'success', id ? 'Client modifié avec succès.' : 'Client créé avec succès.');
+            } else {
+                showFeedback('clients-feedback', 'error', result.data?.erreur || 'Impossible d’enregistrer le client.');
             }
         }
 
         async function ajouterMouvementCompte() {
+            clearFeedback('clients-feedback');
+
             const compteId = document.getElementById('mvt-compte-id').value.trim();
             if (!compteId) {
-                afficher({ erreur: 'Veuillez choisir un client.' });
+                showFeedback('clients-feedback', 'error', 'Veuillez choisir un client.');
                 return;
             }
 
-            await api(`/api/comptes-clients/${compteId}/mouvements`, {
+            const { res, data } = await api(`/api/comptes-clients/${compteId}/mouvements`, {
                 method: 'POST',
                 body: JSON.stringify({
                     type_mvt: document.getElementById('mvt-type').value,
@@ -1976,7 +2224,15 @@
                 })
             });
 
-            await testerDashboard();
+            if (res.ok) {
+                showFeedback('clients-feedback', 'success', 'Mouvement client enregistré avec succès.');
+                document.getElementById('mvt-montant').value = '';
+                document.getElementById('mvt-note').value = '';
+                await testerComptesClients();
+                await testerDashboard();
+            } else {
+                showFeedback('clients-feedback', 'error', data?.erreur || 'Impossible d’enregistrer le mouvement client.');
+            }
         }
 
         async function testerEmployes() {
@@ -2126,12 +2382,15 @@
             resetEmployeForm();
             resetUtilisateurForm();
             clearFeedback('rapport-feedback');
+            clearFeedback('rapport-date-status');
+            clearFeedback('clients-feedback');
             clearFeedback('historique-feedback');
 
             await chargerListeClientsDansSelect();
             await testerSession();
             await chargerEtatFond();
             await testerDashboard();
+            await verifierRapportExistantParDate();
 
             if (currentUser?.role === 'proprietaire') {
                 await chargerFinanceMois();

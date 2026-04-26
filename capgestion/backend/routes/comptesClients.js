@@ -16,8 +16,37 @@ function parseActif(value) {
     return null;
 }
 
+async function getCompteAvecSolde(siteId, compteClientId) {
+    const result = await db.query(
+        `
+    SELECT
+      cc.*,
+      COALESCE(SUM(
+        CASE
+          WHEN m.type_mvt IN ('credit', 'avance', 'ajustement_plus') THEN m.montant
+          WHEN m.type_mvt IN ('remboursement', 'ajustement_moins') THEN -m.montant
+          ELSE 0
+        END
+      ), 0) AS solde_courant
+    FROM comptes_clients cc
+    LEFT JOIN compte_client_mouvements m
+      ON m.compte_client_id = cc.id
+    WHERE cc.id = $1
+      AND cc.site_id = $2
+    GROUP BY
+      cc.id, cc.site_id, cc.nom, cc.telephone, cc.observation,
+      cc.actif, cc.deleted_at, cc.created_by, cc.created_at, cc.updated_at
+    `,
+        [compteClientId, siteId]
+    );
+
+    return result.rows[0] || null;
+}
+
 /**
  * GET /api/comptes-clients
+ * Par défaut: retourne actifs + inactifs
+ * ?actif=true ou ?actif=false pour filtrer
  */
 router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
@@ -25,7 +54,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     try {
         const params = [siteId];
-        let where = `cc.site_id = $1 AND cc.deleted_at IS NULL`;
+        let where = `cc.site_id = $1`;
 
         if (actifFilter !== null) {
             params.push(actifFilter);
@@ -41,6 +70,7 @@ router.get('/', requireAuth, async (req, res) => {
         cc.telephone,
         cc.observation,
         cc.actif,
+        cc.deleted_at,
         cc.created_by,
         cc.created_at,
         cc.updated_at,
@@ -57,7 +87,7 @@ router.get('/', requireAuth, async (req, res) => {
       WHERE ${where}
       GROUP BY
         cc.id, cc.site_id, cc.nom, cc.telephone, cc.observation,
-        cc.actif, cc.created_by, cc.created_at, cc.updated_at
+        cc.actif, cc.deleted_at, cc.created_by, cc.created_at, cc.updated_at
       ORDER BY cc.nom ASC
       `,
             params
@@ -91,9 +121,10 @@ router.post('/', requireAuth, async (req, res) => {
         telephone,
         observation,
         actif,
+        deleted_at,
         created_by
       )
-      VALUES ($1, $2, $3, $4, true, $5)
+      VALUES ($1, $2, $3, $4, true, NULL, $5)
       RETURNING *
       `,
             [
@@ -141,7 +172,6 @@ router.put('/:id', requireAuth, async (req, res) => {
           updated_at = NOW()
       WHERE id = $4
         AND site_id = $5
-        AND deleted_at IS NULL
       RETURNING *
       `,
             [
@@ -169,6 +199,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 /**
  * PUT /api/comptes-clients/:id/statut
+ * Règle: impossible de désactiver un client si son solde n'est pas nul
  */
 router.put('/:id/statut', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
@@ -184,11 +215,25 @@ router.put('/:id/statut', requireAuth, async (req, res) => {
     }
 
     try {
+        const compte = await getCompteAvecSolde(siteId, id);
+
+        if (!compte) {
+            return res.status(404).json({ erreur: 'Client introuvable.' });
+        }
+
+        const solde = Number(compte.solde_courant || 0);
+
+        if (actif === false && solde !== 0) {
+            return res.status(400).json({
+                erreur: `Impossible de désactiver ce client : son solde n'est pas nul (${solde}).`
+            });
+        }
+
         const result = await db.query(
             `
       UPDATE comptes_clients
       SET actif = $1,
-          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
+          deleted_at = NULL,
           updated_at = NOW()
       WHERE id = $2
         AND site_id = $3
@@ -196,10 +241,6 @@ router.put('/:id/statut', requireAuth, async (req, res) => {
       `,
             [actif, id, siteId]
         );
-
-        if (!result.rows.length) {
-            return res.status(404).json({ erreur: 'Client introuvable.' });
-        }
 
         res.json({
             ok: true,

@@ -13,6 +13,7 @@ function parseActif(value) {
 
 /**
  * GET /api/utilisateurs
+ * Par défaut: retourne actifs + inactifs
  */
 router.get('/', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
@@ -20,7 +21,7 @@ router.get('/', requireAuth, requireProprietaire, async (req, res) => {
 
     try {
         const params = [siteId];
-        let where = `u.site_id = $1 AND u.deleted_at IS NULL`;
+        let where = `u.site_id = $1`;
 
         if (actifFilter !== null) {
             params.push(actifFilter);
@@ -38,6 +39,7 @@ router.get('/', requireAuth, requireProprietaire, async (req, res) => {
         u.role,
         u.actif,
         u.must_change_pwd,
+        u.deleted_at,
         u.created_at,
         u.updated_at
       FROM utilisateurs u
@@ -116,10 +118,11 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         mot_de_passe,
         role,
         actif,
-        must_change_pwd
+        must_change_pwd,
+        deleted_at
       )
-      VALUES ($1,$2,$3,$4,$5,$6,true,false)
-      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
+      VALUES ($1,$2,$3,$4,$5,$6,true,false,NULL)
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, deleted_at, created_at, updated_at
       `,
             [
                 siteId,
@@ -246,7 +249,7 @@ router.put('/:id', requireAuth, requireProprietaire, async (req, res) => {
           updated_at = NOW()
       WHERE id = $6
         AND site_id = $7
-      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, deleted_at, created_at, updated_at
       `,
             [
                 employe_id ? Number(employe_id) : null,
@@ -295,11 +298,11 @@ router.put('/:id/statut', requireAuth, requireProprietaire, async (req, res) => 
             `
       UPDATE utilisateurs
       SET actif = $1,
-          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
+          deleted_at = NULL,
           updated_at = NOW()
       WHERE id = $2
         AND site_id = $3
-      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, created_at, updated_at
+      RETURNING id, site_id, employe_id, nom, email, role, actif, must_change_pwd, deleted_at, created_at, updated_at
       `,
             [actif, id, siteId]
         );

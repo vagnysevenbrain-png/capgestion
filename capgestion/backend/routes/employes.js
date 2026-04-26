@@ -22,6 +22,7 @@ function monthToDate(mois) {
 
 /**
  * GET /api/employes
+ * Par défaut: retourne actifs + inactifs
  */
 router.get('/', requireAuth, async (req, res) => {
     const siteId = req.session.siteId;
@@ -29,7 +30,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     try {
         const params = [siteId];
-        let where = `site_id = $1 AND deleted_at IS NULL`;
+        let where = `site_id = $1`;
 
         if (actifFilter !== null) {
             params.push(actifFilter);
@@ -72,9 +73,10 @@ router.post('/', requireAuth, requireProprietaire, async (req, res) => {
         nom,
         poste,
         salaire_base,
-        actif
+        actif,
+        deleted_at
       )
-      VALUES ($1, $2, $3, $4, true)
+      VALUES ($1, $2, $3, $4, true, NULL)
       RETURNING *
       `,
             [
@@ -148,6 +150,7 @@ router.put('/:id', requireAuth, requireProprietaire, async (req, res) => {
 
 /**
  * PUT /api/employes/:id/statut
+ * Garde l'employé visible même inactif
  */
 router.put('/:id/statut', requireAuth, requireProprietaire, async (req, res) => {
     const siteId = req.session.siteId;
@@ -167,7 +170,7 @@ router.put('/:id/statut', requireAuth, requireProprietaire, async (req, res) => 
             `
       UPDATE employes
       SET actif = $1,
-          deleted_at = CASE WHEN $1 = false THEN NOW() ELSE NULL END,
+          deleted_at = NULL,
           updated_at = NOW()
       WHERE id = $2
         AND site_id = $3

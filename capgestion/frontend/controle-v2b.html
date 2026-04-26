@@ -659,7 +659,7 @@
                             <div class="dep-line-compact">
                                 <input id="dep-description" class="form-input" placeholder="Description dépense" />
                                 <input id="dep-montant" class="form-input" placeholder="Montant" />
-                                <button class="btn" onclick="ajouterDepense()">Ajouter</button>
+                                <button class="btn" id="btn-add-depense" onclick="ajouterDepense()">Ajouter</button>
                             </div>
                             <div id="depenses-liste" class="muted">Aucune dépense ajoutée.</div>
                         </div>
@@ -988,7 +988,8 @@
                                 <div class="form-group"><label class="form-label">Mot de passe</label><input
                                         id="usr-password" type="password" class="form-input"
                                         placeholder="Laisser vide pour ne pas changer" /></div>
-                                <div class="form-group"><label class="form-label">Rôle</label>
+                                <div class="form-group">
+                                    <label class="form-label">Rôle</label>
                                     <select id="usr-role" class="form-input">
                                         <option value="gerant">gerant</option>
                                         <option value="proprietaire">proprietaire</option>
@@ -1124,6 +1125,7 @@
             rapportId: null,
             modifiable: true
         };
+
         function withButtonLock(buttonId, loadingText, fn) {
             const btn = document.getElementById(buttonId);
 
@@ -1234,6 +1236,7 @@
                 'Mise à jour...'
             );
         }
+
         function afficher(data) {
             if (!sortie) return;
             sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
@@ -1297,6 +1300,51 @@
         function normalizeDateString(value) {
             if (!value) return '';
             return String(value).slice(0, 10);
+        }
+
+        function formatDateFr(value) {
+            if (!value) return '-';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value);
+            return d.toLocaleDateString('fr-FR');
+        }
+
+        function formatDateTimeFr(value) {
+            if (!value) return '-';
+            const d = new Date(value);
+            if (Number.isNaN(d.getTime())) return String(value);
+            return d.toLocaleString('fr-FR');
+        }
+
+        function getRapportModificationDeadline(rapport) {
+            if (!rapport?.date_rapport || !currentUser?.role) return null;
+
+            const d = new Date(rapport.date_rapport);
+
+            if (currentUser.role === 'gerant') {
+                d.setDate(d.getDate() + 2);
+                d.setHours(23, 59, 59, 999);
+                return d;
+            }
+
+            if (currentUser.role === 'proprietaire') {
+                return new Date(d.getFullYear(), d.getMonth() + 1, 5, 23, 59, 59, 999);
+            }
+
+            return null;
+        }
+
+        function buildRapportDateStatusMessage(rapport) {
+            const status = getRapportStatus(rapport);
+            const editor = getRapportEditorName(rapport);
+            const deadline = getRapportModificationDeadline(rapport);
+            const deadlineText = deadline ? formatDateTimeFr(deadline) : '-';
+
+            if (rapport.modifiable) {
+                return `Rapport existant chargé automatiquement pour le ${formatDateFr(rapport.date_rapport)}. État : ${status}. Dernier éditeur : ${editor}. Modifiable jusqu’au ${deadlineText}.`;
+            }
+
+            return `Rapport existant détecté pour le ${formatDateFr(rapport.date_rapport)}. État : ${status}. Dernier éditeur : ${editor}. Non modifiable.${rapport.raison_non_modifiable ? ' Motif : ' + rapport.raison_non_modifiable : ''}`;
         }
 
         function extractRapportsArray(data) {
@@ -1522,8 +1570,8 @@
             }
 
             container.innerHTML = `
-    <div class="historique-list">
-      ${rows.map(row => {
+        <div class="historique-list">
+          ${rows.map(row => {
                 const depenses = Array.isArray(row.depenses) ? row.depenses : [];
                 const totalSoldes =
                     Number(row.orange_rev || 0) +
@@ -1539,29 +1587,33 @@
                 const totalDepenses = depenses.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
 
                 return `
-          <div class="historique-card">
-            <div class="historique-title">
-              <span>${escapeHtml(row.date_rapport || '-')}</span>
-              <span>${escapeHtml(getRapportStatus(row))}</span>
-            </div>
-            <div class="historique-grid">
-              <div>Observation : ${escapeHtml(row.observation || '-')}</div>
-              <div>Total soldes : ${fcfa(totalSoldes)}</div>
-              <div>B12 vendues : ${Number(row.b12_vendues || 0)}</div>
-              <div>B6 vendues : ${Number(row.b6_vendues || 0)}</div>
-              <div>Commission gaz du jour : ${fcfa(row.commission_gaz_jour || 0)}</div>
-              <div>Dépenses : ${fcfa(totalDepenses)}</div>
-              <div>Nb dépenses : ${depenses.length}</div>
-              <div>Gérant : ${escapeHtml(row.gerant_nom || '-')}</div>
-              <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
-              <div>Motif dernière modification : ${escapeHtml(row.motif_derniere_modification || '-')}</div>
-              <div>Modification par : ${escapeHtml(row.modification_par_nom || '-')}</div>
-            </div>
-          </div>
-        `;
+              <div class="historique-card">
+                <div class="historique-title">
+                  <span>${escapeHtml(row.date_rapport || '-')}</span>
+                  <span>${escapeHtml(getRapportStatus(row))}</span>
+                </div>
+                <div class="historique-grid">
+                  <div>Observation : ${escapeHtml(row.observation || '-')}</div>
+                  <div>Total soldes : ${fcfa(totalSoldes)}</div>
+                  <div>B12 vendues : ${Number(row.b12_vendues || 0)}</div>
+                  <div>B6 vendues : ${Number(row.b6_vendues || 0)}</div>
+                  <div>Commission gaz du jour : ${fcfa(row.commission_gaz_jour || 0)}</div>
+                  <div>Dépenses : ${fcfa(totalDepenses)}</div>
+                  <div>Nb dépenses : ${depenses.length}</div>
+                  <div>Gérant : ${escapeHtml(row.gerant_nom || '-')}</div>
+                  <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
+                  <div>Motif dernière modification : ${escapeHtml(row.motif_derniere_modification || '-')}</div>
+                  <div>Modification par : ${escapeHtml(row.modification_par_nom || '-')}</div>
+                  <div>Créé le : ${escapeHtml(formatDateTimeFr(row.created_at))}</div>
+                  <div>Dernière mise à jour : ${escapeHtml(formatDateTimeFr(row.updated_at))}</div>
+                  <div>Modifiable maintenant : ${row.modifiable ? 'Oui' : 'Non'}</div>
+                  <div>Raison blocage : ${escapeHtml(row.raison_non_modifiable || '-')}</div>
+                </div>
+              </div>
+            `;
             }).join('')}
-    </div>
-  `;
+        </div>
+      `;
         }
 
         function updateRapportSummary() {
@@ -1653,6 +1705,7 @@
         function resetRapportFieldsOnly() {
             document.getElementById('r-observation').value = '';
             document.getElementById('r-motif').value = '';
+
             [
                 'r-orange-rev', 'r-orange-pdv', 'r-wave', 'r-mtn', 'r-moov', 'r-moov-p2',
                 'r-tresor', 'r-especes', 'r-unites', 'r-b12v', 'r-b12r', 'r-b12f',
@@ -1660,6 +1713,7 @@
             ].forEach(id => {
                 document.getElementById(id).value = '';
             });
+
             depensesRapport = [];
             refreshDepensesRapportUI();
             updateRapportSummary();
@@ -1740,6 +1794,7 @@
             }
 
             const rows = extractRapportsArray(data);
+
             if (!rows.length) {
                 setRapportModeCreate();
                 resetRapportFieldsOnly();
@@ -1751,14 +1806,10 @@
             fillRapportForm(rapport);
             setRapportModeEdit(rapport);
 
-            const status = getRapportStatus(rapport);
-            const editor = getRapportEditorName(rapport);
-            const modifiableText = rapport.modifiable ? 'Oui' : 'Non';
-
             showFeedback(
                 'rapport-date-status',
                 rapport.modifiable ? 'info' : 'error',
-                `Rapport existant détecté pour le ${date}. État : ${status}. Modifiable : ${modifiableText}. Dernier éditeur : ${editor}.${rapport.raison_non_modifiable ? ' Motif : ' + rapport.raison_non_modifiable : ''}`
+                buildRapportDateStatusMessage(rapport)
             );
         }
 

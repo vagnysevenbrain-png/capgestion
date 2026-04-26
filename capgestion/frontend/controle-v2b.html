@@ -893,10 +893,8 @@
                     <div class="subtab-panel" data-admin-panel="utilisateurs">
                         <div class="admin-block">
                             <div class="admin-block-title">Utilisateurs</div>
-                            <div class="actions" style="margin-bottom:12px;">
-                                <button class="btn btn-primary" onclick="testerUtilisateurs()">Lister
-                                    utilisateurs</button>
-                            </div>
+
+                            <input type="hidden" id="usr-id" />
 
                             <div class="grid-2">
                                 <div class="form-group">
@@ -913,7 +911,7 @@
                                 <div class="form-group">
                                     <label class="form-label">Mot de passe</label>
                                     <input id="usr-password" type="password" class="form-input"
-                                        placeholder="Minimum 6 caractères" />
+                                        placeholder="Laisser vide pour ne pas changer" />
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Rôle</label>
@@ -930,9 +928,14 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="creerUtilisateur()">Créer
-                                    l’utilisateur</button>
+                                <button class="btn btn-primary" id="btn-save-utilisateur"
+                                    onclick="creerOuModifierUtilisateur()">Créer l’utilisateur</button>
+                                <button class="btn" onclick="resetUtilisateurForm()">Réinitialiser</button>
+                                <button class="btn" onclick="testerUtilisateurs()">Lister utilisateurs</button>
                             </div>
+
+                            <div class="section-label">Liste des utilisateurs</div>
+                            <div id="utilisateurs-liste" class="muted">Aucune liste chargée.</div>
                         </div>
                     </div>
 
@@ -1039,10 +1042,12 @@
         const selectClient = document.getElementById('mvt-compte-id');
         const sortie = document.getElementById('sortie');
         const etatSession = document.getElementById('etat-session');
+
         let depensesRapport = [];
         let currentUser = null;
         let clientsCache = [];
         let employesCache = [];
+        let utilisateursCache = [];
 
         function afficher(data) {
             if (!sortie) return;
@@ -1382,6 +1387,7 @@
             document.getElementById('cc-tel').value = client.telephone || '';
             document.getElementById('cc-obs').value = client.observation || '';
             document.getElementById('btn-save-client').textContent = 'Modifier le compte client';
+
             showMainTab('clients');
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1474,6 +1480,7 @@
             document.getElementById('emp-poste').value = employe.poste || '';
             document.getElementById('emp-salaire').value = employe.salaire_base || 0;
             document.getElementById('btn-save-employe').textContent = 'Modifier l’employé';
+
             showMainTab('admin');
             showAdminTab('employes');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1546,6 +1553,108 @@
 
             if (res.ok) {
                 await testerEmployes();
+            }
+        }
+
+        function resetUtilisateurForm() {
+            document.getElementById('usr-id').value = '';
+            document.getElementById('usr-nom').value = '';
+            document.getElementById('usr-email').value = '';
+            document.getElementById('usr-password').value = '';
+            document.getElementById('usr-role').value = 'gerant';
+            document.getElementById('usr-employe-id').value = '';
+            document.getElementById('btn-save-utilisateur').textContent = 'Créer l’utilisateur';
+        }
+
+        function chargerUtilisateurEdition(index) {
+            const utilisateur = utilisateursCache[index];
+            if (!utilisateur) return;
+
+            document.getElementById('usr-id').value = utilisateur.id;
+            document.getElementById('usr-nom').value = utilisateur.nom || '';
+            document.getElementById('usr-email').value = utilisateur.email || '';
+            document.getElementById('usr-password').value = '';
+            document.getElementById('usr-role').value = utilisateur.role || 'gerant';
+            document.getElementById('usr-employe-id').value = utilisateur.employe_id ?? '';
+            document.getElementById('btn-save-utilisateur').textContent = 'Modifier l’utilisateur';
+
+            showMainTab('admin');
+            showAdminTab('utilisateurs');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderUtilisateursList(utilisateurs) {
+            const container = document.getElementById('utilisateurs-liste');
+
+            if (!Array.isArray(utilisateurs) || !utilisateurs.length) {
+                container.innerHTML = '<span class="muted">Aucun utilisateur trouvé.</span>';
+                return;
+            }
+
+            utilisateursCache = utilisateurs;
+
+            container.innerHTML = `
+        <div class="list-grid">
+          ${utilisateurs.map((utilisateur, index) => `
+            <div class="entity-card">
+              <div class="entity-card-title">${escapeHtml(utilisateur.nom || 'Utilisateur')}</div>
+              <div class="entity-card-line">Email : ${escapeHtml(utilisateur.email || '-')}</div>
+              <div class="entity-card-line">Rôle : ${escapeHtml(utilisateur.role || '-')}</div>
+              <div class="entity-card-line">Employé lié : ${utilisateur.employe_id ?? '-'}</div>
+              <div class="entity-card-line">
+                <span class="status-pill ${utilisateur.actif ? '' : 'off'}">${utilisateur.actif ? 'Actif' : 'Inactif'}</span>
+              </div>
+              <div class="entity-card-actions">
+                <button class="btn btn-sm" onclick="chargerUtilisateurEdition(${index})">Modifier</button>
+                <button class="btn btn-sm" onclick="changerStatutUtilisateur(${utilisateur.id}, ${utilisateur.actif ? 'false' : 'true'})">
+                  ${utilisateur.actif ? 'Désactiver' : 'Activer'}
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+        }
+
+        async function creerOuModifierUtilisateur() {
+            const id = document.getElementById('usr-id').value.trim();
+            const employeId = document.getElementById('usr-employe-id').value.trim();
+
+            const payload = {
+                nom: document.getElementById('usr-nom').value,
+                email: document.getElementById('usr-email').value,
+                mot_de_passe: document.getElementById('usr-password').value,
+                role: document.getElementById('usr-role').value,
+                employe_id: employeId ? Number(employeId) : null
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/utilisateurs/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/utilisateurs', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetUtilisateurForm();
+                await testerUtilisateurs();
+            }
+        }
+
+        async function changerStatutUtilisateur(id, actif) {
+            const { res } = await api(`/api/utilisateurs/${id}/statut`, {
+                method: 'PUT',
+                body: JSON.stringify({ actif })
+            });
+
+            if (res.ok) {
+                await testerUtilisateurs();
             }
         }
 
@@ -1823,6 +1932,33 @@
             }
         }
 
+        async function creerOuModifierCompteClient() {
+            const id = document.getElementById('cc-id').value.trim();
+            const payload = {
+                nom: document.getElementById('cc-nom').value,
+                telephone: document.getElementById('cc-tel').value,
+                observation: document.getElementById('cc-obs').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/comptes-clients/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/comptes-clients', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetCompteClientForm();
+                await testerComptesClients();
+            }
+        }
+
         async function creerCompteClient() {
             await creerOuModifierCompteClient();
         }
@@ -1854,27 +1990,77 @@
             }
         }
 
+        async function creerOuModifierEmploye() {
+            const id = document.getElementById('emp-id').value.trim();
+            const payload = {
+                nom: document.getElementById('emp-nom').value,
+                poste: document.getElementById('emp-poste').value,
+                salaire_base: document.getElementById('emp-salaire').value
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/employes/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/employes', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetEmployeForm();
+                await testerEmployes();
+            }
+        }
+
         async function creerEmploye() {
             await creerOuModifierEmploye();
         }
 
         async function testerUtilisateurs() {
-            await api('/api/utilisateurs');
+            const { res, data } = await api('/api/utilisateurs');
+            if (res.ok) {
+                renderUtilisateursList(data);
+            }
+        }
+
+        async function creerOuModifierUtilisateur() {
+            const id = document.getElementById('usr-id').value.trim();
+            const employeId = document.getElementById('usr-employe-id').value.trim();
+
+            const payload = {
+                nom: document.getElementById('usr-nom').value,
+                email: document.getElementById('usr-email').value,
+                mot_de_passe: document.getElementById('usr-password').value,
+                role: document.getElementById('usr-role').value,
+                employe_id: employeId ? Number(employeId) : null
+            };
+
+            let result;
+            if (id) {
+                result = await api(`/api/utilisateurs/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+            } else {
+                result = await api('/api/utilisateurs', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+            }
+
+            if (result.res.ok) {
+                resetUtilisateurForm();
+                await testerUtilisateurs();
+            }
         }
 
         async function creerUtilisateur() {
-            const employeId = document.getElementById('usr-employe-id').value.trim();
-
-            await api('/api/utilisateurs', {
-                method: 'POST',
-                body: JSON.stringify({
-                    nom: document.getElementById('usr-nom').value,
-                    email: document.getElementById('usr-email').value,
-                    mot_de_passe: document.getElementById('usr-password').value,
-                    role: document.getElementById('usr-role').value,
-                    employe_id: employeId ? Number(employeId) : null
-                })
-            });
+            await creerOuModifierUtilisateur();
         }
 
         async function ajouterFondMisADisposition() {
@@ -1950,6 +2136,7 @@
             updateRapportSummary();
             resetCompteClientForm();
             resetEmployeForm();
+            resetUtilisateurForm();
 
             await chargerListeClientsDansSelect();
             await testerSession();

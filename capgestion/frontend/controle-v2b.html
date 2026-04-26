@@ -766,7 +766,8 @@
                     </div>
 
                     <div class="admin-block-actions">
-                        <button class="btn btn-primary" onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
+                        <button class="btn btn-primary" id="btn-add-mouvement-client"
+                            onclick="ajouterMouvementCompte()">Ajouter le mouvement</button>
                     </div>
                 </div>
             </div>
@@ -872,8 +873,8 @@
                             <div class="admin-block-title">Salaires du mois</div>
                             <div id="finance-salaires-liste" class="muted">Charge un mois pour voir les salaires.</div>
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="enregistrerTousSalairesMois()">Enregistrer
-                                    salaires du mois</button>
+                                <button class="btn btn-primary" id="btn-save-salaires-mois"
+                                    onclick="enregistrerTousSalairesMois()">Enregistrer salaires du mois</button>
                             </div>
                         </div>
 
@@ -895,8 +896,8 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="enregistrerCommissionsMm()">Enregistrer
-                                    commissions MM</button>
+                                <button class="btn btn-primary" id="btn-save-commissions-mm"
+                                    onclick="enregistrerCommissionsMm()">Enregistrer commissions MM</button>
                             </div>
                         </div>
 
@@ -930,8 +931,8 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="enregistrerChargesMensuelles()">Enregistrer
-                                    charges mensuelles</button>
+                                <button class="btn btn-primary" id="btn-save-charges-mensuelles"
+                                    onclick="enregistrerChargesMensuelles()">Enregistrer charges mensuelles</button>
                             </div>
                         </div>
 
@@ -1030,8 +1031,8 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="ajouterFondMisADisposition()">Ajouter mouvement
-                                    fond</button>
+                                <button class="btn btn-primary" id="btn-add-fond"
+                                    onclick="ajouterFondMisADisposition()">Ajouter mouvement fond</button>
                             </div>
                         </div>
 
@@ -1059,8 +1060,8 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="mettreAJourFondMM()">Mettre à jour fonds
-                                    MM</button>
+                                <button class="btn btn-primary" id="btn-save-fond-mm"
+                                    onclick="mettreAJourFondMM()">Mettre à jour fonds MM</button>
                             </div>
                         </div>
 
@@ -1090,7 +1091,8 @@
                             </div>
 
                             <div class="admin-block-actions">
-                                <button class="btn btn-primary" onclick="mettreAJourGaz()">Mettre à jour gaz</button>
+                                <button class="btn btn-primary" id="btn-save-gaz" onclick="mettreAJourGaz()">Mettre à
+                                    jour gaz</button>
                             </div>
                         </div>
 
@@ -1122,7 +1124,116 @@
             rapportId: null,
             modifiable: true
         };
+        function withButtonLock(buttonId, loadingText, fn) {
+            const btn = document.getElementById(buttonId);
 
+            if (!btn) {
+                return Promise.resolve(fn());
+            }
+
+            if (btn.dataset.loading === '1') {
+                return Promise.resolve();
+            }
+
+            const originalText = btn.textContent;
+            btn.dataset.loading = '1';
+            btn.disabled = true;
+            btn.textContent = loadingText;
+
+            return Promise.resolve(fn())
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    btn.dataset.loading = '0';
+                });
+        }
+
+        function lockAsyncAction(fnName, buttonId, loadingTextOrFactory) {
+            const original = window[fnName];
+
+            if (typeof original !== 'function') return;
+            if (original.__isLockedWrapper) return;
+
+            const wrapped = async function (...args) {
+                const loadingText =
+                    typeof loadingTextOrFactory === 'function'
+                        ? loadingTextOrFactory()
+                        : loadingTextOrFactory;
+
+                return withButtonLock(buttonId, loadingText, () => original.apply(this, args));
+            };
+
+            wrapped.__isLockedWrapper = true;
+            window[fnName] = wrapped;
+        }
+
+        function applyButtonLocks() {
+            lockAsyncAction(
+                'enregistrerRapport',
+                'rapport-primary-btn',
+                () => reportEditState.mode === 'edit' ? 'Mise à jour...' : 'Enregistrement...'
+            );
+
+            lockAsyncAction(
+                'creerOuModifierCompteClient',
+                'btn-save-client',
+                () => document.getElementById('cc-id')?.value ? 'Modification...' : 'Création...'
+            );
+
+            lockAsyncAction(
+                'ajouterMouvementCompte',
+                'btn-add-mouvement-client',
+                'Ajout...'
+            );
+
+            lockAsyncAction(
+                'creerOuModifierEmploye',
+                'btn-save-employe',
+                () => document.getElementById('emp-id')?.value ? 'Modification...' : 'Création...'
+            );
+
+            lockAsyncAction(
+                'creerOuModifierUtilisateur',
+                'btn-save-utilisateur',
+                () => document.getElementById('usr-id')?.value ? 'Modification...' : 'Création...'
+            );
+
+            lockAsyncAction(
+                'enregistrerTousSalairesMois',
+                'btn-save-salaires-mois',
+                'Enregistrement...'
+            );
+
+            lockAsyncAction(
+                'enregistrerCommissionsMm',
+                'btn-save-commissions-mm',
+                'Enregistrement...'
+            );
+
+            lockAsyncAction(
+                'enregistrerChargesMensuelles',
+                'btn-save-charges-mensuelles',
+                'Enregistrement...'
+            );
+
+            lockAsyncAction(
+                'ajouterFondMisADisposition',
+                'btn-add-fond',
+                'Ajout...'
+            );
+
+            lockAsyncAction(
+                'mettreAJourFondMM',
+                'btn-save-fond-mm',
+                'Mise à jour...'
+            );
+
+            lockAsyncAction(
+                'mettreAJourGaz',
+                'btn-save-gaz',
+                'Mise à jour...'
+            );
+        }
         function afficher(data) {
             if (!sortie) return;
             sortie.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
@@ -2418,6 +2529,8 @@
         }
 
         async function initApp() {
+            applyButtonLocks();
+
             document.getElementById('r-date').value = todayISO();
             document.getElementById('finance-mois').value = currentMonth();
             document.getElementById('finance-annee').value = currentYear();

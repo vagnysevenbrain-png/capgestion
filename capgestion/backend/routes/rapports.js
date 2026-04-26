@@ -446,12 +446,30 @@ router.get('/', requireAuth, async (req, res) => {
         gu.nom AS gerant_nom,
         mu.nom AS last_modified_by_nom,
 
-        s.orange_rev, s.orange_pdv, s.wave, s.mtn, s.moov,
-        s.moov_p2, s.tresor, s.especes, s.unites,
+        s.orange_rev,
+        s.orange_pdv,
+        s.wave,
+        s.mtn,
+        s.moov,
+        s.moov_p2,
+        s.tresor,
+        s.especes,
+        s.unites,
 
-        g.b12_vendues, g.b12_rechargees, g.b12_fuites,
-        g.b6_vendues,  g.b6_rechargees,  g.b6_fuites,
-        g.caisse_gaz_disponible
+        g.b12_vendues,
+        g.b12_rechargees,
+        g.b12_fuites,
+        g.b6_vendues,
+        g.b6_rechargees,
+        g.b6_fuites,
+        g.caisse_gaz_disponible,
+
+        COALESCE(g.b12_vendues, 0) * COALESCE(gc.b12_commission, 0)
+        + COALESCE(g.b6_vendues, 0) * COALESCE(gc.b6_commission, 0)
+        AS commission_gaz_jour,
+
+        rm_last.motif AS motif_derniere_modification,
+        rm_last.modification_par_nom
       FROM rapports r
       JOIN utilisateurs gu
         ON r.gerant_id = gu.id
@@ -461,6 +479,19 @@ router.get('/', requireAuth, async (req, res) => {
         ON s.rapport_id = r.id
       LEFT JOIN rapport_gaz g
         ON g.rapport_id = r.id
+      LEFT JOIN gaz_config gc
+        ON gc.site_id = r.site_id
+      LEFT JOIN LATERAL (
+        SELECT
+          rm.motif,
+          u2.nom AS modification_par_nom
+        FROM rapport_modifications rm
+        LEFT JOIN utilisateurs u2
+          ON u2.id = rm.modifie_par
+        WHERE rm.rapport_id = r.id
+        ORDER BY rm.id DESC
+        LIMIT 1
+      ) rm_last ON TRUE
       WHERE r.site_id = $1
     `;
     const params = [siteId];
@@ -477,10 +508,19 @@ router.get('/', requireAuth, async (req, res) => {
     params.push(parseInt(limit, 10));
 
     const result = await db.query(query, params);
+    const rapports = result.rows;
 
-    const rapports = [];
-    for (const row of result.rows) {
-      rapports.push(await enrichRapport(db, row, req.session));
+    for (const r of rapports) {
+      const deps = await db.query(
+        `SELECT description, montant FROM rapport_depenses WHERE rapport_id = $1 ORDER BY id ASC`,
+        [r.id]
+      );
+      r.depenses = deps.rows;
+
+      const droit = verifierDroitModification(r, req.session);
+      r.modifiable = droit.ok;
+      r.raison_non_modifiable = droit.ok ? null : droit.erreur;
+      r.date_rapport = toIsoDate(r.date_rapport);
     }
 
     res.json(rapports);
@@ -488,7 +528,7 @@ router.get('/', requireAuth, async (req, res) => {
     console.error('Erreur liste rapports:', err);
     res.status(500).json({ erreur: 'Erreur serveur.' });
   }
-});
+});;
 
 /**
  * GET /api/rapports/:id

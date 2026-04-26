@@ -1411,8 +1411,8 @@
             }
 
             container.innerHTML = `
-        <div class="historique-list">
-          ${rows.map(row => {
+    <div class="historique-list">
+      ${rows.map(row => {
                 const depenses = Array.isArray(row.depenses) ? row.depenses : [];
                 const totalSoldes =
                     Number(row.orange_rev || 0) +
@@ -1428,26 +1428,29 @@
                 const totalDepenses = depenses.reduce((sum, dep) => sum + Number(dep.montant || 0), 0);
 
                 return `
-              <div class="historique-card">
-                <div class="historique-title">
-                  <span>${escapeHtml(row.date_rapport || '-')}</span>
-                  <span>${escapeHtml(getRapportStatus(row))}</span>
-                </div>
-                <div class="historique-grid">
-                  <div>Observation : ${escapeHtml(row.observation || '-')}</div>
-                  <div>Total soldes : ${fcfa(totalSoldes)}</div>
-                  <div>B12 vendues : ${Number(row.b12_vendues || 0)}</div>
-                  <div>B6 vendues : ${Number(row.b6_vendues || 0)}</div>
-                  <div>Dépenses : ${fcfa(totalDepenses)}</div>
-                  <div>Nb dépenses : ${depenses.length}</div>
-                  <div>Gérant : ${escapeHtml(row.gerant_nom || '-')}</div>
-                  <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
-                </div>
-              </div>
-            `;
+          <div class="historique-card">
+            <div class="historique-title">
+              <span>${escapeHtml(row.date_rapport || '-')}</span>
+              <span>${escapeHtml(getRapportStatus(row))}</span>
+            </div>
+            <div class="historique-grid">
+              <div>Observation : ${escapeHtml(row.observation || '-')}</div>
+              <div>Total soldes : ${fcfa(totalSoldes)}</div>
+              <div>B12 vendues : ${Number(row.b12_vendues || 0)}</div>
+              <div>B6 vendues : ${Number(row.b6_vendues || 0)}</div>
+              <div>Commission gaz du jour : ${fcfa(row.commission_gaz_jour || 0)}</div>
+              <div>Dépenses : ${fcfa(totalDepenses)}</div>
+              <div>Nb dépenses : ${depenses.length}</div>
+              <div>Gérant : ${escapeHtml(row.gerant_nom || '-')}</div>
+              <div>Éditeur : ${escapeHtml(getRapportEditorName(row))}</div>
+              <div>Motif dernière modification : ${escapeHtml(row.motif_derniere_modification || '-')}</div>
+              <div>Modification par : ${escapeHtml(row.modification_par_nom || '-')}</div>
+            </div>
+          </div>
+        `;
             }).join('')}
-        </div>
-      `;
+    </div>
+  `;
         }
 
         function updateRapportSummary() {
